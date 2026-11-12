@@ -1,0 +1,68 @@
+<section class="hero">
+    <h1>Encontrá tu próxima vivienda</h1>
+    <p>{% if en_panel %}Mirá las viviendas disponibles, compará precios y revisá los detalles de cada una.{% else %}Explorá las propiedades disponibles, compará precios y coordiná una visita con el propietario.{% endif %}</p>
+    <span class="cont"><i class="fa-solid fa-key"></i> {{ propiedades|length }} vivienda{{ propiedades|length|pluralize:"s" }} disponible{{ propiedades|length|pluralize:"s" }}</span>
+</section>
+
+{% if not api_ok %}
+<div class="alert">No se pudo conectar con el servicio de propiedades. Probá de nuevo en unos minutos.</div>
+{% endif %}
+
+<section class="filtros">
+    <form method="get" action="{{ catalogo_url }}">
+        <div class="campo" style="flex:2; min-width:220px;">
+            <label for="q">Buscar</label>
+            <input id="q" name="q" value="{{ q }}" placeholder="Dirección o descripción (ej: Centro, 2 dormitorios)">
+        </div>
+        <div class="campo" style="min-width:130px;">
+            <label for="precio_min">Precio mínimo</label>
+            <input id="precio_min" name="precio_min" type="number" step="0.01" min="0" value="{{ precio_min }}" placeholder="0">
+        </div>
+        <div class="campo" style="min-width:130px;">
+            <label for="precio_max">Precio máximo</label>
+            <input id="precio_max" name="precio_max" type="number" step="0.01" min="0" value="{{ precio_max }}" placeholder="50000">
+        </div>
+        <div class="campo" style="min-width:160px;">
+            <label for="orden">Ordenar por</label>
+            <select id="orden" name="orden">
+                <option value="" {% if not orden %}selected{% endif %}>Más recientes</option>
+                <option value="recientes" {% if orden == 'recientes' %}selected{% endif %}>Novedades primero</option>
+                <option value="precio_asc" {% if orden == 'precio_asc' %}selected{% endif %}>Menor precio</option>
+                <option value="precio_desc" {% if orden == 'precio_desc' %}selected{% endif %}>Mayor precio</option>
+            </select>
+        </div>
+        <div class="campo chk">
+            <input id="con_foto" name="con_foto" value="1" type="checkbox" {% if con_foto %}checked{% endif %}>
+            <label for="con_foto">Solo con foto</label>
+        </div>
+        <button class="btn-buscar" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        <a class="btn-limpiar" href="{{ catalogo_url }}">Limpiar</a>
+    </form>
+</section>
+
+{% if propiedades %}
+<div class="grid">
+    {% for p in propiedades %}
+    <a class="card" href="{% url 'usuarios:catalogo-detalle' p.id %}">
+        <div class="card-fotos">
+            {% if p.imagen_url %}
+            <img src="{{ p.imagen_url }}" alt="Foto de {{ p.direccion }}">
+            {% else %}
+            <i class="fa-regular fa-image sinfoto"></i>
+            {% endif %}
+            <span class="precio">${{ p.precio_mensual|floatformat:0 }} <small>/ mes</small></span>
+        </div>
+        <div class="card-body">
+            <h3>{{ p.direccion }}</h3>
+            <p>{{ p.descripcion|truncatechars:110 }}</p>
+            <span class="ver">{% if en_panel %}Ver detalle{% else %}Ver detalle y coordinar visita{% endif %} <i class="fa-solid fa-arrow-right"></i></span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="vacio">
+    <i class="fa-regular fa-folder-open"></i>
+    No hay viviendas que coincidan con la búsqueda. Probá quitar filtros.
+</div>
+{% endif %}

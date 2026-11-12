@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="padding: 40px; text-align: center;">
+    <h1 style="color: #dc3545;">⚠️ Error de Autenticación</h1>
+    <p style="font-size: 18px; margin: 20px 0;">{{ msg }}</p>
+    <a href="/usuarios/login/" style="display: inline-block; padding: 12px 24px; background: #417690; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px;">
+        Volver al Login
+    </a>
+</div>
+{% endblock %}

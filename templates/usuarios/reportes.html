@@ -1,0 +1,164 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Reportes{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-chart-column" style="color:#4f46e5;"></i> Reportes de gestión</h2>
+<p class="sub">Resumen global del negocio: viviendas, contratos, cobranza y mantenimiento.
+    Datos leídos desde la API en tiempo real.</p>
+
+<div class="stats-grid">
+    {% for k in kpis %}
+    <a href="{{ k.url }}" class="stat-card">
+        <span class="stat-icon {{ k.bg }}"><i class="fa-solid {{ k.icon }}"></i></span>
+        <div>
+            <div class="stat-num">{{ k.num }}</div>
+            <div class="stat-label">{{ k.label }}</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+
+
+<div class="bloque">
+    <h3><i class="fa-solid fa-file-signature" style="color:#10b981;"></i> Estado de cuentas por contrato</h3>
+    {% if resumen %}
+    <table>
+        <tr>
+            <th>Contrato</th><th>Vivienda</th><th>Inquilino</th><th>Estado</th>
+            <th>Inicio</th><th>Fin</th><th>Precio</th><th>Pagados</th>
+            <th>Cobrado</th><th>Saldo</th>
+        </tr>
+        {% for r in resumen %}
+        <tr>
+            <td>#{{ r.id }}</td>
+            <td>{{ r.propiedad }}</td>
+            <td>{{ r.inquilino }}</td>
+            <td>
+                <span class="pill {% if r.estado == 'activo' %}pill-green
+                             {% elif r.estado == 'finalizado' %}pill-gray
+                             {% else %}pill-red{% endif %}">{{ r.estado }}</span>
+            </td>
+            <td>{{ r.inicio }}</td>
+            <td>{{ r.fin }}</td>
+            <td>${{ r.precio|floatformat:0 }}</td>
+            <td>{{ r.meses_pagados }}/{{ r.meses_esperados }}</td>
+            <td>${{ r.cobrado|floatformat:0 }}</td>
+            <td>{% if r.saldo > 0 %}<strong style="color:#dc2626;">${{ r.saldo|floatformat:0 }}</strong>
+                {% else %}${{ r.saldo|floatformat:0 }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty"><i class="fa-regular fa-folder-open"></i> No hay contratos registrados.</p>
+    {% endif %}
+</div>
+
+<div class="bloque">
+    <h3><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Contratos en atraso </h3>
+    {% if morosos %}
+    <table>
+        <tr><th>Contrato</th><th>Vivienda</th><th>Inquilino</th><th>Meses adeudados</th><th>Deuda</th></tr>
+        {% for r in morosos %}
+        <tr>
+            <td>#{{ r.id }}</td>
+            <td>{{ r.propiedad }}</td>
+            <td>{{ r.inquilino }}</td>
+            <td>{% for mes in r.pendientes %}<span class="mes">{{ mes }}</span>{% endfor %}</td>
+            <td><strong style="color:#dc2626;">${{ r.saldo|floatformat:0 }}</strong></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="ok-all"><i class="fa-solid fa-circle-check"></i> No hay contratos activos con saldo pendiente.</p>
+    {% endif %}
+</div>
+
+<div class="bloque">
+    <h3><i class="fa-solid fa-coins" style="color:#f59e0b;"></i> Ingresos por mes</h3>
+    {% if por_mes %}
+    <table>
+        <tr><th>Mes</th><th>Pagos</th><th>Monto</th><th style="width:45%;">Proporción</th></tr>
+        {% for f in por_mes %}
+        <tr>
+            <td>{{ f.mes }}</td>
+            <td>{{ f.operaciones }}</td>
+            <td><strong>${{ f.total|floatformat:0 }}</strong></td>
+            <td>
+                <div class="barra"><div class="fill" style="width:{% widthratio f.total tope 100 %}%"></div></div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty"><i class="fa-regular fa-folder-open"></i> Aún no hay pagos registrados.</p>
+    {% endif %}
+</div>
+
+<div class="dos-columnas">
+    <div class="bloque">
+        <h3><i class="fa-solid fa-house-chimney" style="color:#3b82f6;"></i> Ocupación de viviendas</h3>
+        {% if estados_prop %}
+        <table>
+            <tr><th>Estado</th><th>Cantidad</th></tr>
+            {% for estado, cant in estados_prop.items %}
+            <tr>
+                <td>
+                    <span class="pill {% if estado == 'DISPONIBLE' %}pill-green
+                                 {% elif estado == 'ALQUILADA' %}pill-blue
+                                 {% else %}pill-gray{% endif %}">{{ estado }}</span>
+                </td>
+                <td>{{ cant }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="empty">Sin viviendas.</p>
+        {% endif %}
+    </div>
+
+    <div class="bloque">
+        <h3><i class="fa-solid fa-screwdriver-wrench" style="color:#ef4444;"></i> Mantenimiento por estado</h3>
+        {% if estados_man %}
+        <table>
+            <tr><th>Estado</th><th>Solicitudes</th></tr>
+            {% for estado, cant in estados_man.items %}
+            <tr>
+                <td>
+                    <span class="pill {% if estado == 'resuelto' %}pill-green
+                                 {% elif estado == 'en_proceso' %}pill-yellow
+                                 {% elif estado == 'pendiente' %}pill-red
+                                 {% else %}pill-gray{% endif %}">{{ estado }}</span>
+                </td>
+                <td>{{ cant }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="empty">Sin solicitudes de mantenimiento.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .descarga { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 22px 0 6px; }
+    .descarga span { font-size: 13px; font-weight: 700; color: #475569; }
+    .descarga i { color: #4f46e5; }
+    .chip {
+        text-decoration: none; font-size: 12px; font-weight: 600; color: #4f46e5;
+        border: 1px solid #c7d2fe; background: #eef2ff; padding: 7px 14px; border-radius: 50px;
+    }
+    .chip:hover { background: #e0e7ff; }
+    .bloque { margin-top: 30px; }
+    .bloque h3 { font-size: 16px; color: #1e293b; margin-bottom: 12px; }
+    .dos-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .mes {
+        display: inline-block; background: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 700;
+        padding: 3px 9px; border-radius: 50px; margin: 2px 3px 2px 0;
+    }
+    .ok-all { color: #059669; font-size: 14px; font-weight: 600; background: #ecfdf5;
+              border: 1px solid #a7f3d0; border-radius: 12px; padding: 14px 16px; }
+    .barra { background: #f1f5f9; border-radius: 50px; height: 12px; overflow: hidden; }
+    .barra .fill { background: linear-gradient(90deg, #4f46e5, #7c3aed); height: 12px; border-radius: 50px; }
+</style>
+{% endblock %}

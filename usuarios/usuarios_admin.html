@@ -1,0 +1,147 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block n_usu %}active{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-users-gear" style="color:#1e293b;"></i> Gestión de usuarios</h2>
+<p class="sub">
+    La API no expone un listado general de usuarios: se muestran los IDs que aparecen
+    en viviendas (propietarios), contratos (inquilinos) y en <code>/usuarios/inquilinos</code>.
+    Si conocés el ID de otro usuario, buscalo y se agrega a la lista.
+</p>
+
+<div class="form-card" style="margin-top:0; margin-bottom:24px;">
+    <form method="get" class="fila-acciones">
+        <div class="field" style="flex:1; min-width:220px;">
+            <label>Buscar por ID de usuario</label>
+            <input name="buscar" value="{{ buscar }}" placeholder="Ej: 12" inputmode="numeric">
+        </div>
+        <button class="btn" type="submit" style="margin-top:22px;">
+            <i class="fa-solid fa-magnifying-glass"></i> Buscar
+        </button>
+        <a class="btn-alt" href="{% url 'usuarios:admin-crear-usuario' %}">
+            <i class="fa-solid fa-user-plus"></i> Alta de usuario
+        </a>
+    </form>
+</div>
+
+{% if usuarios %}
+<table>
+    <tr>
+        <th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th>
+        <th>Rol</th><th>Estado</th><th>Alta</th><th>Acciones</th>
+    </tr>
+    {% for u in usuarios %}
+    <tr>
+        <td>#{{ u.id }}</td>
+        <td><strong>{{ u.nombre }}</strong></td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.telefono|default:"—" }}</td>
+        <td>
+            <span class="pill {% if u.rol == 'administrador' %}pill-gray
+                         {% elif u.rol == 'propietario' %}pill-blue
+                         {% elif u.rol == 'inquilino' %}pill-green
+                         {% else %}pill-yellow{% endif %}">{{ u.rol }}</span>
+        </td>
+        <td>
+            {% if u.activo %}<span class="ok"><i class="fa-solid fa-circle-check"></i> activo</span>
+            {% else %}<span class="bad"><i class="fa-solid fa-circle-xmark"></i> inactivo</span>{% endif %}
+        </td>
+        <td>{{ u.created_at|date:"Y-m-d" }}</td>
+        <td>
+            <div class="fila-acciones">
+                <details class="editar">
+                    <summary><i class="fa-solid fa-pen"></i> Editar</summary>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="editar">
+                        <input type="hidden" name="usuario_id" value="{{ u.id }}">
+                        <label>Nombre</label>
+                        <input name="nombre" value="{{ u.nombre }}" minlength="3" maxlength="100" required>
+                        <label>Email</label>
+                        <input name="email" type="email" value="{{ u.email }}" required>
+                        <label>Teléfono (0991-2345)</label>
+                        <input name="telefono" value="{{ u.telefono|default_if_none:'' }}"
+                               pattern="^\d{4}-\d{4}$" placeholder="0991-2345">
+                        <label>Rol</label>
+                        <select name="rol">
+                            <option value="administrador" {% if u.rol == 'administrador' %}selected{% endif %}>administrador</option>
+                            <option value="propietario" {% if u.rol == 'propietario' %}selected{% endif %}>propietario</option>
+                            <option value="inquilino" {% if u.rol == 'inquilino' %}selected{% endif %}>inquilino</option>
+                            <option value="visitante" {% if u.rol == 'visitante' %}selected{% endif %}>visitante</option>
+                        </select>
+                        <label>Nueva contraseña (opcional, mínimo 6)</label>
+                        <input name="password" type="password" minlength="6" placeholder="dejar vacío = no cambia">
+                        <label class="chk">
+                            <input type="checkbox" name="activo" value="1" {% if u.activo %}checked{% endif %}>
+                            Usuario activo
+                        </label>
+                        <button class="btn btn-mini" type="submit">Guardar cambios</button>
+                    </form>
+                </details>
+
+                {% if u.id == user.pk %}
+                <span class="self" title="Estás editando tu propia cuenta">sos vos</span>
+                {% else %}
+                <form method="post"
+                      onsubmit="return confirm('¿Eliminar al usuario #{{ u.id }} ({{ u.nombre }})? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="eliminar">
+                    <input type="hidden" name="usuario_id" value="{{ u.id }}">
+                    <button class="btn-danger" type="submit" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i>
+    No se encontraron usuarios. Probá buscar un ID concreto o creá uno nuevo.</p>
+{% endif %}
+
+<p class="nota"><i class="fa-solid fa-circle-info"></i>
+    El usuario administrador principal (ID 1) está protegido: la API no permite eliminarlo.</p>
+
+<style>
+    .fila-acciones { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+    .fila-acciones form { display: flex; align-items: center; gap: 6px; margin: 0; }
+    .btn-mini { padding: 6px 10px; font-size: 12px; border-radius: 8px; box-shadow: none; }
+    .btn-alt {
+        text-decoration: none; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 700;
+        color: #4f46e5; border: 1px solid #c7d2fe; background: #eef2ff;
+    }
+    .btn-alt:hover { background: #e0e7ff; }
+    .btn-danger {
+        border: 1px solid #fecaca; background: white; color: #ef4444; border-radius: 8px;
+        padding: 6px 10px; font-size: 12px; cursor: pointer;
+    }
+    .btn-danger:hover { background: #fef2f2; }
+    .ok { color: #059669; font-size: 13px; font-weight: 600; }
+    .bad { color: #dc2626; font-size: 13px; font-weight: 600; }
+    .self { font-size: 12px; color: #94a3b8; font-weight: 600; }
+    .nota { margin-top: 22px; font-size: 13px; color: #64748b; }
+    .nota i { color: #6366f1; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+    .editar { position: relative; }
+    .editar summary {
+        cursor: pointer; list-style: none; font-size: 12px; font-weight: 600; color: #4f46e5;
+        border: 1px solid #c7d2fe; background: #eef2ff; padding: 6px 10px; border-radius: 8px;
+    }
+    .editar summary:hover { background: #e0e7ff; }
+    .editar[open] form {
+        position: absolute; right: 0; top: 30px; z-index: 40; width: 280px; background: white;
+        border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;
+        box-shadow: 0 14px 30px rgba(15,23,42,.15);
+    }
+    .editar form label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin: 8px 0 4px; }
+    .editar form input, .editar form select {
+        width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+    .editar form .chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .editar form .chk input { width: auto; }
+    .editar form .btn-mini { margin-top: 12px; }
+</style>
+{% endblock %}

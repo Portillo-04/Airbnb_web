@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Forzar estilos limpios en el login del admin */
+    #login-form { width: 400px; margin: 0 auto; }
+    .form-row input { width: 100%; padding: 10px; box-sizing: border-box; }
+    .errornote { background: #ba2121; color: white; padding: 10px; border-radius: 4px; }
+</style>
+{% endblock %}

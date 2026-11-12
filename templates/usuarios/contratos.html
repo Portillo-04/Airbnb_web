@@ -1,0 +1,273 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Contratos{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-file-signature" style="color:#10b981;"></i> Contratos</h2>
+<p class="sub">
+    {% if es_admin %}Todos los contratos del sistema. El documento se adjunta acá y el cierre se hace desde el listado.
+    {% elif user.rol == 'propietario' %}Contratos sobre tus propiedades (se generan al aprobar una solicitud de alquiler).
+    {% else %}Tus contratos.{% endif %}
+</p>
+
+{% if contratos %}
+<table>
+    <tr>
+        <th>ID</th><th>Propiedad</th><th>Inquilino</th><th>Inicio</th>
+        <th>Fin</th><th>Precio</th><th>Documento</th><th>Estado</th><th>Cancelación</th>
+        {% if es_admin %}<th>Acciones</th>{% endif %}
+    </tr>
+    {% for c in contratos %}
+    <tr>
+        <td>#{{ c.id }}</td>
+        <td>#{{ c.propiedad_id }}{% if c.propiedad_direccion %} · {{ c.propiedad_direccion }}{% endif %}</td>
+        <td>#{{ c.inquilino_id }}{% if c.inquilino_nombre %} · {{ c.inquilino_nombre }}{% endif %}</td>
+        <td>{{ c.fecha_inicio|slice:":10" }}</td>
+        <td>{{ c.fecha_fin|slice:":10" }}</td>
+        <td>${{ c.precio_mensual }}</td>
+        <td>
+            {% if c.pdf_url %}
+            <a class="pdf-link" href="{{ c.pdf_url }}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-file-pdf"></i> Ver PDF
+            </a>
+            {% else %}—{% endif %}
+        </td>
+        <td>
+            <span class="pill {% if c.estado == 'activo' %}pill-green
+                         {% elif c.estado == 'finalizado' %}pill-gray
+                         {% else %}pill-red{% endif %}">{{ c.estado }}</span>
+        </td>
+        <td>
+            {% if c.puede_formato %}
+            <a class="formato-link" href="{% url 'usuarios:contrato-cancelacion' c.id %}"
+               target="_blank" rel="noopener">
+                <i class="fa-solid fa-print"></i> Formato
+            </a>
+            {% else %}—{% endif %}
+        </td>
+        {% if es_admin %}
+        <td>
+            {% if c.estado == 'activo' %}
+            <form method="post" class="fila-acciones">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="estado">
+                <input type="hidden" name="contrato_id" value="{{ c.id }}">
+                <select name="estado" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px;">
+                    <option value="finalizado">finalizado</option>
+                    <option value="cancelado">cancelado</option>
+                </select>
+                <button class="btn btn-mini" type="submit">Aplicar</button>
+            </form>
+            {% else %}
+            <span style="color:#94a3b8; font-size:12px;">— cerrado —</span>
+            {% endif %}
+        </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i>
+    {% if es_propietario %}Todavía no hay contratos sobre tus viviendas. Se crean
+    automáticamente cuando aprobás una solicitud en
+    <a href="{% url 'usuarios:solicitudes-alquiler' %}" style="color:#4f46e5; font-weight:600;">Sol. Alquiler</a>.
+    {% else %}Todavía no hay contratos.{% endif %}
+</p>
+{% endif %}
+
+<style>
+    .formato-link { color: #0f766e; font-weight: 600; text-decoration: none; font-size: 13px; white-space: nowrap; }
+    .formato-link:hover { text-decoration: underline; }
+    .formato-link i { margin-right: 4px; }
+</style>
+
+{% if es_admin %}
+<div class="form-card">
+    <h3><i class="fa-solid fa-plus" style="color:#4f46e5;"></i> Nuevo contrato</h3>
+    {% if propiedades and inquilinos %}
+    <form method="post" id="formContrato">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="nuevo">
+        <div class="form-row">
+            <div class="field">
+                <label>Vivienda *</label>
+                <select name="propiedad_id" id="selPropiedad" required>
+                    <option value="" selected disabled>Elegí una vivienda</option>
+                    {% for p in propiedades %}
+                    <option value="{{ p.id }}" data-precio="{{ p.precio_mensual }}">
+                        #{{ p.id }} · {{ p.direccion }} · {{ p.estado }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Inquilino *</label>
+                <select name="inquilino_id" required>
+                    <option value="" selected disabled>Elegí un inquilino</option>
+                    {% for u in inquilinos %}
+                    <option value="{{ u.id }}">{{ u.nombre }} — {{ u.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Precio mensual ($) *</label>
+                <input name="precio_mensual" id="inpPrecioContrato" type="number"
+                       step="0.01" min="0" required placeholder="15000">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="field">
+                <label>Inicio *</label>
+                <input name="fecha_inicio" type="date" required value="{{ hoy }}">
+            </div>
+            <div class="field">
+                <label>Fin *</label>
+                <input name="fecha_fin" type="date" required value="{{ fin_sugerido }}">
+            </div>
+        </div>
+        <button class="btn" type="submit">Crear contrato</button>
+        <p class="hint"><i class="fa-solid fa-circle-info"></i>
+            Solo se puede contratar una vivienda en estado DISPONIBLE; si está
+            ALQUILADA o en MANTENIMIENTO, cambiala desde
+            <a href="{% url 'usuarios:propiedades' %}" style="color:#4f46e5; font-weight:600;">Propiedades</a>.
+            El contrato queda activo y habilita al inquilino a ver la vivienda,
+            sus pagos y reportar mantenimiento.</p>
+    </form>
+    {% else %}
+    <p class="empty" style="padding:14px 0;">
+        <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i>
+        {% if not propiedades %}Necesitás al menos una vivienda registrada.
+        {% else %}Necesitás un usuario con rol <strong>inquilino</strong> activo.{% endif %}
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if es_admin %}
+<div class="form-card">
+    <h3><i class="fa-solid fa-file-pdf" style="color:#b91c1c;"></i> Documento del contrato</h3>
+    {% if contratos %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="pdf">
+        <div class="form-row">
+            <div class="field">
+                <label>Contrato *</label>
+                <select name="contrato_id" id="selContrato" required>
+                    <option value="">Elegí un contrato…</option>
+                    {% for c in contratos %}
+                    <option value="{{ c.id }}" data-tiene="{% if c.pdf_url %}1{% else %}0{% endif %}">
+                        #{{ c.id }} · {{ c.propiedad_direccion|default:"vivienda" }} · {{ c.inquilino_nombre|default:"inquilino" }}{% if c.pdf_url %} (con PDF){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="field">
+                <label>Documento PDF *</label>
+                <input name="documento" id="inpPdf" type="file" accept="application/pdf,.pdf" class="input-pdf">
+                <div class="pdf-picker">
+                    <label for="inpPdf" class="btn-pdf" id="lblPdf">
+                        <i class="fa-solid fa-paperclip"></i> Adjuntar PDF
+                    </label>
+                    <span id="pdfNombre" class="pdf-nombre">Ningún archivo seleccionado</span>
+                    <button type="button" id="btnQuitarPdf" class="pdf-quitar" hidden>Quitar</button>
+                </div>
+                <span id="pdfError" class="pdf-error" role="alert"></span>
+            </div>
+        </div>
+        <button class="btn" type="submit">Guardar PDF</button>
+        <p class="hint"><i class="fa-solid fa-circle-info"></i>
+            Si el contrato ya tiene un PDF, el nuevo lo reemplaza.
+            Queda disponible en la columna Documento del listado.</p>
+    </form>
+    {% else %}
+    <p class="empty"><i class="fa-regular fa-file-pdf"></i>
+        Todavía no hay contratos para adjuntar un documento.</p>
+    {% endif %}
+</div>
+
+<style>
+    .fila-acciones { display: flex; align-items: center; gap: 6px; }
+    .btn-mini { padding: 6px 10px; font-size: 12px; border-radius: 8px; box-shadow: none; }
+    .hint { color: #64748b; font-size: 13px; margin-top: 12px; }
+    .hint i { color: #6366f1; }
+    .pdf-link { color: #b91c1c; font-weight: 600; text-decoration: none; font-size: 13px; }
+    .pdf-link:hover { text-decoration: underline; }
+    .pdf-link i { margin-right: 4px; }
+    .input-pdf { display: none; }
+    .pdf-picker { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .btn-pdf { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px;
+               border-radius: 10px; background: #eef2ff; color: #4338ca; font-weight: 600;
+               font-size: 13px; cursor: pointer; border: 1px dashed #c7d2fe; }
+    .btn-pdf:hover { background: #e0e7ff; }
+    .pdf-nombre { color: #64748b; font-size: 13px; max-width: 320px; overflow: hidden;
+                  text-overflow: ellipsis; white-space: nowrap; }
+    .pdf-nombre.ok { color: #059669; font-weight: 600; }
+    .pdf-quitar { background: none; border: none; color: #b91c1c; font-size: 12px;
+                  cursor: pointer; text-decoration: underline; padding: 0; }
+    .pdf-error { display: block; color: #b91c1c; font-size: 12px; margin-top: 6px; }
+</style>
+<script>
+    const selContrato = document.getElementById('selContrato');
+    const lblPdf = document.getElementById('lblPdf');
+    const inpPdf = document.getElementById('inpPdf');
+    const pdfNombre = document.getElementById('pdfNombre');
+    const pdfError = document.getElementById('pdfError');
+    const btnQuitarPdf = document.getElementById('btnQuitarPdf');
+
+    if (selContrato && lblPdf) {
+        selContrato.addEventListener('change', () => {
+            const opcion = selContrato.options[selContrato.selectedIndex];
+            const tiene = opcion && opcion.getAttribute('data-tiene') === '1';
+            lblPdf.innerHTML = tiene
+                ? '<i class="fa-solid fa-rotate"></i> Reemplazar PDF'
+                : '<i class="fa-solid fa-paperclip"></i> Adjuntar PDF';
+        });
+    }
+
+    if (inpPdf) {
+        const limpiarPdf = () => {
+            inpPdf.value = '';
+            pdfNombre.textContent = 'Ningún archivo seleccionado';
+            pdfNombre.classList.remove('ok');
+            pdfError.textContent = '';
+            btnQuitarPdf.hidden = true;
+        };
+
+        inpPdf.addEventListener('change', () => {
+            const archivo = inpPdf.files[0];
+            pdfError.textContent = '';
+            if (!archivo) return limpiarPdf();
+            if (!archivo.name.toLowerCase().endsWith('.pdf')) {
+                limpiarPdf();
+                pdfError.textContent = 'El documento debe ser un archivo PDF.';
+                return;
+            }
+            if (archivo.size > 10 * 1024 * 1024) {
+                limpiarPdf();
+                pdfError.textContent = 'El PDF no puede superar los 10 MB.';
+                return;
+            }
+            pdfNombre.textContent = archivo.name;
+            pdfNombre.classList.add('ok');
+            btnQuitarPdf.hidden = false;
+        });
+
+        btnQuitarPdf.addEventListener('click', limpiarPdf);
+    }
+
+    const selPropiedad = document.getElementById('selPropiedad');
+    const inpPrecioContrato = document.getElementById('inpPrecioContrato');
+    if (selPropiedad && inpPrecioContrato) {
+        selPropiedad.addEventListener('change', () => {
+            const opcion = selPropiedad.options[selPropiedad.selectedIndex];
+            const precio = opcion && opcion.getAttribute('data-precio');
+            if (precio && !inpPrecioContrato.value) {
+                inpPrecioContrato.value = Number(precio).toFixed(2);
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

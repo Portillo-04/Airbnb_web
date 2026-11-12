@@ -1,0 +1,55 @@
+from django.urls import path
+from .views import (
+    dashboard_view,
+    custom_login_view,
+    register_view,
+    logout_view,
+    ver_solicitudes_alquiler,
+    ver_solicitudes_visita,
+    mis_solicitudes_visita,
+    modulo_propiedades,
+    modulo_contratos,
+    formato_cancelacion_contrato,
+    modulo_pagos,
+    modulo_mantenimiento,
+    reportes_view,
+    admin_usuarios,
+    catalogo_view,
+    catalogo_panel_view,
+    catalogo_detalle_view,
+    paypal_crear_orden_view,
+    paypal_capturar_pago_view,
+    pago_efectivo_view,
+)
+
+app_name = 'usuarios'
+
+urlpatterns = [
+    path('', dashboard_view, name='dashboard'),
+    path('catalogo/', catalogo_view, name='catalogo'),
+    path('catalogo-panel/', catalogo_panel_view, name='catalogo-panel'),
+    path('catalogo/<int:pk>/', catalogo_detalle_view,
+         name='catalogo-detalle'),
+    path('login/', custom_login_view, name='custom-login'),
+    path('logout/', logout_view, name='logout'),
+    path('register/', register_view, name='register'),
+    path('solicitudes-alquiler/', ver_solicitudes_alquiler,
+         name='solicitudes-alquiler'),
+    path('solicitudes-visita/', ver_solicitudes_visita,
+         name='solicitudes-visita'),
+    path('mis-visitas/', mis_solicitudes_visita, name='mis-visitas'),
+
+    # Módulos de gestión (consumen la API)
+    path('propiedades/', modulo_propiedades, name='propiedades'),
+    path('contratos/', modulo_contratos, name='contratos'),
+    path('contratos/<int:pk>/cancelacion/', formato_cancelacion_contrato,
+         name='contrato-cancelacion'),
+    path('pagos/', modulo_pagos, name='pagos'),
+    path('pagos/efectivo/', pago_efectivo_view, name='pago-efectivo'),
+    path('pagos/paypal/crear/', paypal_crear_orden_view, name='paypal-crear'),
+    path('pagos/paypal/capturar/', paypal_capturar_pago_view,
+         name='paypal-capturar'),
+    path('mantenimiento/', modulo_mantenimiento, name='mantenimiento'),
+    path('reportes/', reportes_view, name='reportes'),
+    path('usuarios-admin/', admin_usuarios, name='admin-usuarios'),
+]

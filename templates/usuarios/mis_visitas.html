@@ -1,0 +1,37 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Mis visitas{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-calendar-check" style="color:#8b5cf6;"></i> Mis solicitudes de visita</h2>
+<p class="sub">Acá ves el estado de las visitas que pediste y la respuesta del propietario.</p>
+
+{% if solicitudes %}
+<table>
+    <tr>
+        <th>Vivienda</th><th>Fecha solicitada</th><th>Mensaje</th>
+        <th>Estado</th><th>Respuesta del propietario</th>
+    </tr>
+    {% for sol in solicitudes %}
+    <tr>
+        <td>
+            {% if sol.propiedad_direccion %}
+            <a href="{% url 'usuarios:catalogo-detalle' sol.propiedad_id %}" style="color:#4f46e5; font-weight:600;">{{ sol.propiedad_direccion }}</a>
+            {% else %}#{{ sol.propiedad_id }}{% endif %}
+        </td>
+        <td>{{ sol.fecha_solicitada|slice:"8:10" }}/{{ sol.fecha_solicitada|slice:"5:7" }}/{{ sol.fecha_solicitada|slice:":4" }}{% if "T" in sol.fecha_solicitada %} {{ sol.fecha_solicitada|slice:"11:16" }}{% endif %}</td>
+        <td style="max-width:260px;">{{ sol.mensaje|default:"-"|truncatechars:70 }}</td>
+        <td>
+            <span class="pill {% if sol.estado == 'APROBADA' %}pill-green
+                         {% elif sol.estado == 'RECHAZADA' %}pill-red
+                         {% elif sol.estado == 'COMPLETADA' %}pill-blue
+                         {% else %}pill-yellow{% endif %}">{{ sol.estado }}</span>
+        </td>
+        <td style="max-width:220px;">{{ sol.respuesta_propietario|default:"Todavía sin respuesta" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i> Todavía no pediste ninguna visita.
+    <a href="{% url 'usuarios:catalogo' %}" style="color:#4f46e5; font-weight:600;">Mirá el catálogo</a> y coordiná una.</p>
+{% endif %}
+{% endblock %}

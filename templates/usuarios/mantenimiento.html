@@ -1,0 +1,211 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Mantenimiento{% endblock %}
+
+{% block head %}
+<style>
+    .mant-lista { display: flex; flex-direction: column; gap: 14px; }
+    .mant-vivienda { border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;
+        background: #f8fafc; display: flex; flex-direction: column; gap: 12px; }
+    .mant-cabecera { display: flex; align-items: center; gap: 10px;
+        font-size: 15px; color: #0f172a; }
+    .mant-cabecera strong { font-size: 16px; }
+    .mant-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .mant-grid { grid-template-columns: 1fr; } }
+    .mant-vivienda .field label { font-size: 11px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: .04em; color: #475569; }
+    .mant-vivienda input, .mant-vivienda textarea { width: 100%; padding: 9px 11px;
+        border: 1px solid #d7e3e1; border-radius: 10px; font-size: 13px;
+        background: white; color: #134e4a; outline: none; }
+    .mant-vivienda input:focus, .mant-vivienda textarea:focus { border-color: #0f766e;
+        box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+    .mant-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+    .mant-editar { display: flex; flex-direction: column; gap: 6px;
+        min-width: 240px; margin-top: 8px; }
+    .mant-editar textarea, .mant-editar select { padding: 6px; border-radius: 8px;
+        border: 1px solid #e2e8f0; font-size: 12px; width: 100%; }
+</style>
+{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-screwdriver-wrench" style="color:#ef4444;"></i> Mantenimiento</h2>
+<p class="sub">
+    {% if puede_gestionar %}Solicitudes de mantenimiento de todas las viviendas. Podés modificar los datos de la vivienda, repararla y actualizar cada solicitud.
+    {% elif es_inquilino %}Reportá problemas de tu vivienda y seguí el estado de cada solicitud.
+    {% else %}Solicitudes y viviendas en mantenimiento de tus propiedades.{% endif %}
+</p>
+
+{% if lista_no_disponible and solicitudes %}
+<div class="alert" style="margin-bottom:18px;">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    El servidor no está devolviendo el listado de mantenimiento (error HTTP 500).
+    Se muestran las solicitudes creadas desde esta web.
+</div>
+{% endif %}
+
+{% if puede_reparar %}
+<div class="form-card" style="margin-top:0; margin-bottom:26px;">
+    <h3><i class="fa-solid fa-house-chimney-crack" style="color:#ef4444;"></i>
+        Viviendas en mantenimiento</h3>
+    <p class="sub" style="margin-bottom:14px;">
+        Modificá los datos de la vivienda y marcala como DISPONIBLE cuando
+        termine la reparación.
+    </p>
+    {% if viviendas_mantenimiento %}
+    <div class="mant-lista">
+        {% for v in viviendas_mantenimiento %}
+        <form method="post" class="mant-vivienda">
+            {% csrf_token %}
+            <input type="hidden" name="propiedad_id" value="{{ v.id }}">
+            <div class="mant-cabecera">
+                <strong>#{{ v.id }}</strong>
+                {% if v.local %}
+                <span class="pill pill-yellow" title="El servidor no confirmó estos datos">
+                    guardado en esta web</span>
+                {% endif %}
+            </div>
+            <div class="mant-grid">
+                <div class="field">
+                    <label>Dirección</label>
+                    <input name="direccion" value="{{ v.direccion }}"
+                           maxlength="255" required>
+                </div>
+                <div class="field">
+                    <label>Precio mensual</label>
+                    <input name="precio_mensual" type="number" min="0"
+                           step="0.01" value="{{ v.precio_mensual|floatformat:2 }}"
+                           required>
+                </div>
+            </div>
+            <div class="field">
+                <label>Descripción</label>
+                <textarea name="descripcion" rows="2"
+                          maxlength="1000">{{ v.descripcion }}</textarea>
+            </div>
+            <div class="mant-acciones">
+                <button class="btn btn-sm" type="submit" name="accion" value="editar">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+                </button>
+                <button class="btn btn-sm" type="submit" name="accion" value="reparar"
+                        style="background:#16a34a; border-color:#16a34a;">
+                    <i class="fa-solid fa-check"></i> Marcar reparada
+                </button>
+            </div>
+        </form>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty" style="padding:12px 0;">
+        <i class="fa-regular fa-circle-check" style="color:#22c55e;"></i>
+        No hay viviendas en estado MANTENIMIENTO. Las que mandes a
+        mantenimiento desde Propiedades van a aparecer acá.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if es_inquilino %}
+<div class="form-card" style="margin-top:0; margin-bottom:26px;">
+    <h3><i class="fa-solid fa-plus" style="color:#4f46e5;"></i> Reportar un problema</h3>
+    {% if propiedades_activas %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear">
+        <div class="form-row">
+            <div class="field">
+                <label>Vivienda *</label>
+                <select name="propiedad_id" required>
+                    {% for p in propiedades_activas %}
+                    <option value="{{ p.id }}">#{{ p.id }} — {{ p.direccion }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Título *</label>
+                <input name="titulo" required minlength="3" maxlength="200" placeholder="Ej: Pérdida de agua en el baño">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="field">
+                <label>Descripción *</label>
+                <textarea name="descripcion" rows="3" required minlength="10" maxlength="1000"
+                          placeholder="Contá qué pasa y desde cuándo (mínimo 10 caracteres)"></textarea>
+            </div>
+        </div>
+        <button class="btn" type="submit"><i class="fa-solid fa-paper-plane"></i> Enviar solicitud</button>
+    </form>
+    {% else %}
+    <p class="empty" style="padding:16px 0;">
+        <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i>
+        Necesitás un contrato activo para reportar mantenimiento.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if solicitudes %}
+<table>
+    <tr>
+        <th>ID</th><th>Título</th><th>Descripción</th><th>Vivienda</th>
+        {% if not es_inquilino %}<th>Inquilino</th>{% endif %}
+        <th>Estado</th><th>Creada</th>
+        {% if puede_gestionar %}<th>Modificar</th>{% endif %}
+    </tr>
+    {% for s in solicitudes %}
+    <tr>
+        <td>#{{ s.id }}</td>
+        <td><strong>{{ s.titulo }}</strong>
+            {% if s.local %}<br><small style="color:#b45309;"
+                title="La API no confirmó estos cambios">guardado en esta web</small>{% endif %}
+        </td>
+        <td style="max-width:300px;">{{ s.descripcion|truncatechars:80 }}</td>
+        <td>{{ s.propiedad_direccion|default:s.propiedad_id }}</td>
+        {% if not es_inquilino %}
+        <td>{{ s.inquilino_nombre|default:s.inquilino_id }}</td>
+        {% endif %}
+        <td>
+            <span class="pill {% if s.estado == 'pendiente' %}pill-yellow
+                         {% elif s.estado == 'en_proceso' %}pill-blue
+                         {% elif s.estado == 'resuelto' %}pill-green
+                         {% else %}pill-red{% endif %}">{{ s.estado_label|default:s.estado }}</span>
+        </td>
+        <td>{{ s.created_at|slice:":10" }}</td>
+        {% if puede_gestionar %}
+        <td>
+            <details>
+                <summary style="cursor:pointer; color:#4f46e5;
+                                font-weight:700; font-size:12px;">Editar</summary>
+                <form method="post" class="mant-editar">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cambiar_estado">
+                    <input type="hidden" name="solicitud_id" value="{{ s.id }}">
+                    <input type="hidden" name="api_id" value="{{ s.api_id|default:'' }}">
+                    <input type="hidden" name="propiedad_id" value="{{ s.propiedad_id }}">
+                    <input type="hidden" name="propiedad_direccion" value="{{ s.propiedad_direccion }}">
+                    <input type="hidden" name="inquilino_id" value="{{ s.inquilino_id }}">
+                    <input type="hidden" name="inquilino_nombre" value="{{ s.inquilino_nombre }}">
+                    <textarea name="descripcion" rows="3" required
+                              minlength="10" maxlength="1000">{{ s.descripcion }}</textarea>
+                    <select name="estado">
+                        <option value="PENDIENTE" {% if s.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="EN_PROCESO" {% if s.estado == 'en_proceso' %}selected{% endif %}>En proceso</option>
+                        <option value="RESUELTO" {% if s.estado == 'resuelto' %}selected{% endif %}>Resuelto</option>
+                        <option value="RECHAZADO" {% if s.estado == 'rechazado' %}selected{% endif %}>Rechazado</option>
+                    </select>
+                    <button class="btn btn-sm" type="submit">Guardar</button>
+                </form>
+            </details>
+        </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i>
+    {% if lista_no_disponible and not es_inquilino %}El servidor no está devolviendo las solicitudes (HTTP 500). Las viviendas en mantenimiento figuran arriba; las solicitudes que se creen desde esta web van a aparecer acá.
+    {% elif lista_no_disponible %}El servidor no está devolviendo las solicitudes (HTTP 500). Las que se creen desde esta web van a aparecer acá.
+    {% elif es_inquilino %}Todavía no reportaste problemas de mantenimiento.
+    {% else %}No hay solicitudes de mantenimiento.{% endif %}
+</p>
+{% endif %}
+
+{% endblock %}

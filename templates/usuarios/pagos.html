@@ -1,0 +1,483 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Pagos{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-credit-card" style="color:#f59e0b;"></i> Pagos</h2>
+<p class="sub">
+    {% if es_admin %}Registrá y consultá los pagos por contrato. Los meses pendientes se calculan según el plazo del contrato.
+    {% elif user.rol == 'propietario' %}Pagos registrados en los contratos de tus viviendas (solo lectura).
+    {% else %}Consultá tus pagos, el saldo de tu contrato y pagá online con PayPal.{% endif %}
+</p>
+
+{% if contratos %}
+<div class="pend-banner">
+    <span class="pb-num">${{ total_pendiente|floatformat:0 }}</span>
+    <span class="pb-label">
+        {% if user.rol == 'inquilino' %}total pendiente de pago en tus contratos
+        {% else %}total pendiente de cobro en tus contratos visibles{% endif %}
+    </span>
+</div>
+
+<table>
+    <tr>
+        <th>Contrato</th><th>Vivienda</th><th>Inquilino</th><th>Estado</th>
+        <th>Meses pagados</th><th>Meses pendientes</th><th>Cobrado</th><th>Saldo</th><th></th>
+    </tr>
+    {% for r in resumen %}
+    <tr>
+        <td>#{{ r.id }}</td>
+        <td>{{ r.propiedad }}</td>
+        <td>{{ r.inquilino }}</td>
+        <td>
+            <span class="pill {% if r.estado == 'activo' %}pill-green
+                         {% elif r.estado == 'finalizado' %}pill-gray
+                         {% else %}pill-red{% endif %}">{{ r.estado }}</span>
+        </td>
+        <td>{{ r.meses_pagados }} de {{ r.meses_esperados }}</td>
+        <td>
+            {% if r.cerrado %}
+            <span style="color:#94a3b8; font-size:12px;">— cerrado —</span>
+            {% elif r.pendientes %}
+                {% for mes in r.pendientes %}<span class="mes">{{ forloop.counter }} mes{{ forloop.counter|pluralize:"es" }}</span>{% endfor %}
+            {% else %}
+            <span class="ok"><i class="fa-solid fa-circle-check"></i> al día</span>
+            {% endif %}
+        </td>
+        <td>${{ r.cobrado|floatformat:0 }}</td>
+        <td>
+            {% if r.saldo > 0 %}<strong style="color:#dc2626;">${{ r.saldo|floatformat:0 }}</strong>
+            {% else %}${{ r.saldo|floatformat:0 }}{% endif %}
+        </td>
+        <td><a class="btn btn-mini" href="?contrato={{ r.id }}">Ver</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty">
+    {% if es_admin %}No hay contratos todavía: creá uno desde
+    <a href="{% url 'usuarios:contratos' %}" style="color:#4f46e5; font-weight:600;">Contratos</a>
+    para poder registrar pagos.
+    {% else %}No tenés contratos visibles para gestionar pagos.
+    {% if es_propietario %}Aparecen cuando aprobás una solicitud de alquiler en
+    <a href="{% url 'usuarios:solicitudes-alquiler' %}" style="color:#4f46e5; font-weight:600;">Sol. Alquiler</a>.{% endif %}{% endif %}
+</p>
+{% endif %}
+
+{% if es_admin and pendientes_pago %}
+<div class="detalle">
+    <h3><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> Pagos pendientes de aprobación</h3>
+    <table>
+        <tr>
+            <th>Inquilino</th><th>Contrato</th><th>Vivienda</th><th>Método</th>
+            <th>Meses</th><th>Monto</th><th>Fecha</th><th>Comprobante</th><th></th>
+        </tr>
+        {% for p in pendientes_pago %}
+        <tr>
+            <td>{{ p.inquilino_nombre|default:p.inquilino_id }}</td>
+            <td>#{{ p.contrato_id }}</td>
+            <td>{{ p.propiedad_nombre|default:"-" }}</td>
+            <td><span class="pill pill-blue">{{ p.get_metodo_display }}</span></td>
+            <td><span class="pill pill-blue">{{ p.meses_cubiertos }} mes{{ p.meses_cubiertos|pluralize:"es" }}</span></td>
+            <td><strong>${{ p.monto|floatformat:2 }}</strong></td>
+            <td>{{ p.fecha_pago }}</td>
+            <td>{% if p.paypal_order_id %}<code class="orden">{{ p.paypal_order_id }}</code>{% else %}-{% endif %}</td>
+            <td>
+                <div class="acciones-pago">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="aprobar-pago">
+                        <input type="hidden" name="pendiente_id" value="{{ p.id }}">
+                        <button class="btn btn-mini aprobar" type="submit">
+                            <i class="fa-solid fa-check"></i> Aprobar
+                        </button>
+                    </form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="rechazar-pago">
+                        <input type="hidden" name="pendiente_id" value="{{ p.id }}">
+                        <button class="btn btn-mini rechazar" type="submit">
+                            <i class="fa-solid fa-xmark"></i> Cancelar
+                        </button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% if contrato_actual %}
+<div class="detalle">
+    <h3><i class="fa-solid fa-receipt" style="color:#4f46e5;"></i> Contrato #{{ contrato_actual }}</h3>
+
+    {% if actual %}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-icon bg-green"><i class="fa-solid fa-sack-dollar"></i></span>
+            <div><div class="stat-num">${{ actual.cobrado|floatformat:0 }}</div>
+                 <div class="stat-label">Cobrado</div></div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon bg-orange"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <div><div class="stat-num">${{ actual.saldo|floatformat:0 }}</div>
+                 <div class="stat-label">Saldo pendiente</div></div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon bg-blue"><i class="fa-solid fa-calendar-days"></i></span>
+            <div><div class="stat-num">{{ actual.meses_pagados }}/{{ actual.meses_esperados }}</div>
+                 <div class="stat-label">Meses pagados</div></div>
+        </div>
+    </div>
+
+    {% if actual.cerrado %}
+    <p class="sub" style="margin-top:14px;">
+        <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i>
+        Contrato {{ actual.estado }}: no genera meses pendientes ni saldo.
+    </p>
+    {% endif %}
+
+    {% if actual.pendientes %}
+    <p class="sub" style="margin-top:16px;">
+        <i class="fa-solid fa-clock" style="color:#f59e0b;"></i> Faltan pagar:
+        {% for mes in actual.pendientes %}<span class="mes">{{ forloop.counter }} mes{{ forloop.counter|pluralize:"es" }}</span>{% endfor %}
+    </p>
+    {% endif %}
+
+    {% if user.rol == 'inquilino' %}
+    <div class="pago-online">
+        <h3><i class="fa-solid fa-money-check-dollar" style="color:#0f766e;"></i> Pagar el alquiler</h3>
+        {% if actual.estado == 'activo' %}
+            {% if actual.saldo > 0 %}
+            <p class="sub">
+                Elegí el método de pago y cuántos meses pagar: se cubren primero
+                los meses impagos más antiguos. El administrador confirma el
+                pago antes de descontar los meses.
+            </p>
+            <div class="metodos-pago">
+                <div class="metodo-card">
+                    <h4><i class="fa-solid fa-money-bill-wave" style="color:#059669;"></i> Efectivo</h4>
+                    <p class="sub">
+                        Avisá que vas a pagar en efectivo. Queda pendiente hasta
+                        que el administrador reciba el dinero.
+                    </p>
+                    <form method="post" action="{% url 'usuarios:pago-efectivo' %}"
+                          id="formEfectivo" data-precio="{{ actual.precio|floatformat:'2u' }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="contrato_id" value="{{ actual.id }}">
+                        <div class="field">
+                            <label for="efectivoMeses">Meses a pagar</label>
+                            <select id="efectivoMeses" name="meses_cubiertos">
+                                {% for opcion in opciones_meses_online %}
+                                <option value="{{ opcion.valor }}">{{ opcion.texto }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Total ($)</label>
+                            <input id="efectivoTotal" readonly>
+                        </div>
+                        <button class="btn" type="submit">
+                            <i class="fa-solid fa-hand-holding-dollar"></i> Avisar pago en efectivo
+                        </button>
+                    </form>
+                </div>
+
+                <div class="metodo-card">
+                    <h4><i class="fa-brands fa-paypal" style="color:#0070ba;"></i> Tarjeta (PayPal)</h4>
+                    {% if paypal_configurado %}
+                    <p class="sub">
+                        Se procesa con PayPal ({{ paypal_moneda }}) y queda
+                        pendiente de aprobación del administrador.
+                    </p>
+                    <form id="formPaypal" data-contrato="{{ actual.id }}">
+                        {% csrf_token %}
+                        <div class="field">
+                            <label for="paypalMeses">Meses a pagar</label>
+                            <select id="paypalMeses" name="meses_cubiertos">
+                                {% for opcion in opciones_meses_online %}
+                                <option value="{{ opcion.valor }}">{{ opcion.texto }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Total ({{ paypal_moneda }})</label>
+                            <input id="paypalTotal" readonly>
+                        </div>
+                    </form>
+                    <div id="paypalButtons"></div>
+                    <p id="paypalMsg" class="sub"></p>
+                    {% else %}
+                    <div class="alert">
+                        El pago con tarjeta está desactivado: faltan las
+                        credenciales sandbox de PayPal (PAYPAL_CLIENT_ID y
+                        PAYPAL_CLIENT_SECRET) en el .env. Mientras tanto podés
+                        avisar el pago en efectivo.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="ok" style="margin-top:12px;">
+                <i class="fa-solid fa-circle-check"></i> Estás al día: no hay meses pendientes en este contrato.
+            </p>
+            {% endif %}
+        {% else %}
+        <p class="sub" style="margin-top:12px;">
+            El contrato figura como <strong>{{ actual.estado }}</strong>:
+            no admite pagos.
+        </p>
+        {% endif %}
+
+        {% if mis_pendientes %}
+        <table style="margin-top:16px;">
+            <tr><th>Fecha</th><th>Método</th><th>Meses</th><th>Monto</th><th>Comprobante</th><th>Estado</th><th></th></tr>
+            {% for p in mis_pendientes %}
+            <tr>
+                <td>{{ p.fecha_pago }}</td>
+                <td>{{ p.get_metodo_display }}</td>
+                <td>{{ p.meses_cubiertos }} mes{{ p.meses_cubiertos|pluralize:"es" }}</td>
+                <td>${{ p.monto|floatformat:2 }}</td>
+                <td>{% if p.paypal_order_id %}<code class="orden">{{ p.paypal_order_id }}</code>{% else %}-{% endif %}</td>
+                <td>
+                    <span class="pill {% if p.estado == 'aprobado' %}pill-green{% elif p.estado == 'rechazado' %}pill-red{% else %}pill-yellow{% endif %}">{{ p.estado }}</span>
+                </td>
+                <td>
+                    {% if p.estado == 'pendiente' %}
+                    <form method="post"
+                          onsubmit="return confirm('&iquest;Cancelar este aviso de pago?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="cancelar-aviso">
+                        <input type="hidden" name="pendiente_id" value="{{ p.id }}">
+                        <button class="btn btn-mini rechazar" type="submit">
+                            <i class="fa-solid fa-xmark"></i> Cancelar
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if pagos %}
+    <table>
+        <tr><th>ID</th><th>Fecha de pago</th><th>Monto</th><th>Cubre</th><th>Método</th><th>Descripción</th></tr>
+        {% for p in pagos %}
+        <tr>
+            <td>#{{ p.id }}</td>
+            <td>{{ p.fecha_pago }}</td>
+            <td><strong>${{ p.monto }}</strong></td>
+            <td>
+                <span class="pill pill-blue">{{ p.meses_cubiertos|default:1 }} mes{{ p.meses_cubiertos|default:1|pluralize:"es" }}</span>
+            </td>
+            <td><span class="pill pill-blue">{% if p.descripcion and 'PayPal' in p.descripcion %}PayPal{% else %}{{ p.metodo_pago|title }}{% endif %}</span></td>
+            <td>{{ p.descripcion|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="empty"><i class="fa-regular fa-folder-open"></i> Este contrato aún no tiene pagos registrados.</p>
+    {% endif %}
+    <p class="hint" style="margin-top:10px;">
+        <i class="fa-solid fa-circle-info"></i>
+        Los pagos ya registrados no se pueden borrar: la API no expone esa
+        operación. Sí podés cancelar los avisos de pago pendientes.
+    </p>
+
+    {% if es_admin %}
+    <div class="form-card">
+        <h3><i class="fa-solid fa-plus" style="color:#4f46e5;"></i> Registrar pago (contrato #{{ contrato_actual }})</h3>
+        <form method="post" id="formPago" data-precio="{{ actual.precio|default:0 }}">
+            {% csrf_token %}
+            <input type="hidden" name="contrato_id" value="{{ contrato_actual }}">
+            <div class="form-row">
+                <div class="field">
+                    <label>Fecha de pago *</label>
+                    <input name="fecha_pago" type="date" required>
+                </div>
+                <div class="field">
+                    <label>Meses que cubre *</label>
+                    <select name="meses_cubiertos" id="mesesCubiertos" required>
+                        {% for opcion in opciones_meses_admin %}
+                        <option value="{{ opcion.valor }}">{{ opcion.texto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Monto ($) *</label>
+                    <input name="monto" id="montoPago" type="number" step="0.01" min="0" required
+                           value="{% if actual %}{{ actual.precio }}{% endif %}" placeholder="15000">
+                </div>
+                <div class="field">
+                    <label>Método *</label>
+                    <select name="metodo_pago" required>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label>Descripción (opcional)</label>
+                    <input name="descripcion" placeholder="Alquiler Octubre 2026">
+                </div>
+            </div>
+            <button class="btn" type="submit">Registrar pago</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="sub" style="margin-top:16px;">
+        <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i>
+        Solo el administrador registra pagos. Acá ves el detalle de los ya registrados.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+    .pend-banner {
+        display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #fff7ed, #fef3c7);
+        border: 1px solid #fde68a; border-radius: 16px; padding: 16px 20px; margin-bottom: 20px;
+    }
+    .pb-num { font-size: 26px; font-weight: 800; color: #b45309; }
+    .pb-label { font-size: 13px; color: #92400e; font-weight: 600; }
+    .mes {
+        display: inline-block; background: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 700;
+        padding: 3px 9px; border-radius: 50px; margin: 2px 3px 2px 0;
+    }
+    .ok { color: #059669; font-size: 13px; font-weight: 600; }
+    .btn-mini { padding: 7px 12px; font-size: 12px; border-radius: 8px; box-shadow: none; text-decoration: none; }
+    .detalle { margin-top: 34px; padding-top: 24px; border-top: 2px dashed #e2e8f0; }
+    .detalle h3 { color: #1e293b; font-size: 17px; margin-bottom: 16px; }
+    .pago-online { margin-top: 24px; padding: 20px; border: 1px solid #dbeafe; border-radius: 16px;
+        background: linear-gradient(135deg, #f8fbff, #eef6ff); }
+    .pago-online h3 { font-size: 16px; color: #0c4a6e; margin-bottom: 8px; }
+    .pago-online .sub { margin-bottom: 14px; }
+    .metodos-pago {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 16px; margin-top: 6px;
+    }
+    .metodo-card {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+        padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .metodo-card h4 {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 14px; color: #1e293b; margin: 0;
+    }
+    .metodo-card .sub { margin: 0; font-size: 12px; }
+    .metodo-card .field { margin: 0; }
+    .metodo-card .field label { font-size: 12px; }
+    .metodo-card .btn { margin-top: auto; align-self: flex-start; }
+    .metodo-card .alert { margin: 0; font-size: 12px; }
+    #paypalButtons { margin-top: 4px; }
+    .orden { font-size: 11px; color: #475569; background: #f1f5f9; padding: 2px 6px;
+        border-radius: 6px; }
+    .acciones-pago { display: flex; gap: 6px; }
+    .acciones-pago form { display: inline; }
+    .btn-mini.aprobar { background: #059669; }
+    .btn-mini.rechazar { background: #dc2626; }
+    .hint { color: #64748b; font-size: 13px; margin-top: 12px; }
+    .hint i { color: #6366f1; }
+</style>
+
+<script>
+    (function () {
+        const form = document.getElementById('formPago');
+        if (!form) return;
+        const precio = parseFloat(form.dataset.precio) || 0;
+        const meses = document.getElementById('mesesCubiertos');
+        const monto = document.getElementById('montoPago');
+        meses.addEventListener('change', function () {
+            monto.value = (precio * parseInt(meses.value, 10)).toFixed(2);
+        });
+    })();
+</script>
+
+<script>
+    (function () {
+        const form = document.getElementById('formEfectivo');
+        if (!form) return;
+        const precio = parseFloat(form.dataset.precio) || 0;
+        const meses = document.getElementById('efectivoMeses');
+        const total = document.getElementById('efectivoTotal');
+        function recalcular() {
+            total.value = (precio * parseInt(meses.value, 10)).toFixed(2);
+        }
+        meses.addEventListener('change', recalcular);
+        recalcular();
+    })();
+</script>
+
+{% if user.rol == 'inquilino' and paypal_configurado %}
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id|escapejs }}&currency={{ paypal_moneda|escapejs }}&intent=capture"></script>
+<script>
+    (function () {
+        const contenedor = document.getElementById('paypalButtons');
+        const form = document.getElementById('formPaypal');
+        if (!contenedor || !form || !window.paypal) return;
+
+        const meses = document.getElementById('paypalMeses');
+        const total = document.getElementById('paypalTotal');
+        const mensaje = document.getElementById('paypalMsg');
+        const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+        const contratoId = parseInt(form.dataset.contrato, 10);
+        const precio = parseFloat('{{ actual.precio|default:0|floatformat:"2u" }}') || 0;
+
+        function recalcular() {
+            total.value = (precio * parseInt(meses.value, 10)).toFixed(2);
+        }
+        meses.addEventListener('change', recalcular);
+        recalcular();
+
+        function pedir(url, cuerpo) {
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf
+                },
+                body: JSON.stringify(cuerpo)
+            }).then(function (respuesta) {
+                return respuesta.json().catch(function () { return {}; })
+                    .then(function (datos) {
+                        if (!respuesta.ok) {
+                            throw new Error(datos.error || 'No se pudo procesar el pago.');
+                        }
+                        return datos;
+                    });
+            });
+        }
+
+        paypal.Buttons({
+            style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'paypal' },
+            createOrder: function () {
+                return pedir('{% url "usuarios:paypal-crear" %}', {
+                    contrato_id: contratoId,
+                    meses_cubiertos: parseInt(meses.value, 10)
+                }).then(function (datos) { return datos.id; });
+            },
+            onApprove: function (datos) {
+                return pedir('{% url "usuarios:paypal-capturar" %}', {
+                    orderID: datos.orderID
+                }).then(function (respuesta) {
+                    mensaje.textContent = respuesta.mensaje;
+                    mensaje.style.color = '#166534';
+                    setTimeout(function () { window.location.reload(); }, 2000);
+                });
+            },
+            onError: function (error) {
+                mensaje.textContent = (error && error.message)
+                    ? error.message
+                    : 'No se pudo completar el pago con PayPal.';
+                mensaje.style.color = '#dc2626';
+            }
+        }).render('#paypalButtons');
+    })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,290 @@
+{% extends "usuarios/base_panel.html" %}
+{% load l10n %}
+{% block title %}Propiedades{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-house-chimney" style="color:#3b82f6;"></i> Propiedades</h2>
+<p class="sub">
+    {% if es_admin %}Gestión de todas las viviendas del sistema: alta, datos, propietario y estado.
+    {% elif user.rol == 'propietario' %}Tus propiedades publicadas (solo lectura). Para cambios, contactá al administrador.
+    {% elif user.rol == 'inquilino' %}La vivienda que tenés en alquiler (solo lectura).
+    {% else %}Propiedades.{% endif %}
+</p>
+
+{% if propiedades %}
+<table>
+    <tr>
+        <th>ID</th><th>Foto</th><th>Dirección</th><th>Descripción</th>
+        <th>Precio mensual</th><th>Estado</th>
+        {% if es_admin %}<th>Propietario</th><th>Acciones</th>{% endif %}
+    </tr>
+    {% for p in propiedades %}
+    <tr>
+        <td>#{{ p.id }}</td>
+        <td>
+            {% if p.imagen_url %}
+<img src="{{ p.imagen_url }}"
+     alt="Foto de la propiedad"
+     style="width:74px; height:52px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0;">
+            {% else %}
+            <span style="display:inline-flex; width:74px; height:52px; border-radius:8px; background:#f1f5f9;
+                         align-items:center; justify-content:center; color:#94a3b8;"><i class="fa-regular fa-image"></i></span>
+            {% endif %}
+        </td>
+        <td><strong>{{ p.direccion }}</strong></td>
+        <td style="max-width:260px;">{{ p.descripcion|truncatechars:90 }}</td>
+        <td>${{ p.precio_mensual }}</td>
+        <td>
+            <span class="pill {% if p.estado == 'DISPONIBLE' %}pill-green
+                         {% elif p.estado == 'ALQUILADA' %}pill-blue
+                         {% elif p.estado == 'MANTENIMIENTO' %}pill-yellow
+                         {% else %}pill-gray{% endif %}">{{ p.estado }}</span>
+            {% if p.id in alquiladas %}<br><small style="color:#64748b;">contrato activo</small>{% endif %}
+            {% if p.estado_local or p.datos_locales %}<br><small style="color:#b45309;" title="El servidor no confirmó el cambio">guardado en esta web</small>{% endif %}
+        </td>
+        {% if es_admin %}
+        <td>
+            {% if p.propietario_nombre %}
+            {{ p.propietario_nombre }}<br><small style="color:#64748b;">#{{ p.propietario_id }}</small>
+            {% else %}
+            <span style="color:#94a3b8;">#{{ p.propietario_id }}</span>
+            {% endif %}
+        </td>
+        <td>
+            <div class="fila-acciones">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="estado">
+                    <input type="hidden" name="propiedad_id" value="{{ p.id }}">
+                    <select name="estado" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px;">
+                        <option value="DISPONIBLE" {% if p.estado == 'DISPONIBLE' %}selected{% endif %}>DISPONIBLE</option>
+                        <option value="ALQUILADA" {% if p.estado == 'ALQUILADA' %}selected{% endif %}>ALQUILADA</option>
+                        <option value="MANTENIMIENTO" {% if p.estado == 'MANTENIMIENTO' %}selected{% endif %}>MANTENIMIENTO</option>
+                    </select>
+                    <button class="btn btn-mini" type="submit" title="Cambiar estado"><i class="fa-solid fa-check"></i></button>
+                </form>
+
+                <details class="editar">
+                    <summary><i class="fa-solid fa-pen"></i> Editar</summary>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="editar">
+                        <input type="hidden" name="propiedad_id" value="{{ p.id }}">
+                        <label>Dirección</label>
+                        <input name="direccion" value="{{ p.direccion }}" required>
+                        <label>Precio mensual</label>
+                        {# type=number exige punto decimal: el formato es-AR (8000,0) vacía el campo #}
+                        <input name="precio_mensual" type="number" step="0.01" min="0" value="{{ p.precio_mensual|unlocalize }}" required>
+                        <label>Descripción</label>
+                        <textarea name="descripcion" rows="2" required>{{ p.descripcion }}</textarea>
+                        <label>Propietario</label>
+                        {% if propietarios %}
+                        <select name="propietario_id" required>
+                            {% for o in propietarios %}
+                            <option value="{{ o.id }}" {% if o.id == p.propietario_id %}selected{% endif %}>
+                                {{ o.nombre }} ({{ o.email }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <small style="color:#dc2626;">No hay propietarios activos: creá uno en Usuarios.</small>
+                        {% endif %}
+                        <label>Foto {% if p.imagen_url %}(dejala vacía para conservar la actual){% endif %}</label>
+                        <input name="foto" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                        <button class="btn btn-mini" type="submit">Guardar</button>
+                    </form>
+                </details>
+
+                {% if p.id not in con_contratos %}
+                <form method="post" onsubmit="return confirm('&iquest;Eliminar la vivienda #{{ p.id }} ({{ p.direccion|escapejs }})? Esta acci&oacute;n no se puede deshacer.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="eliminar">
+                    <input type="hidden" name="propiedad_id" value="{{ p.id }}">
+                    <button class="btn-danger" type="submit" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </form>
+                {% else %}
+                <span class="sin-borrar" title="Tiene contratos en el historial: la API no permite eliminarla.">
+                    <i class="fa-solid fa-lock"></i> sin borrado
+                </span>
+                {% endif %}
+            </div>
+        </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i>
+    {% if user.rol == 'inquilino' %}Todavía no tenés una vivienda en alquiler con contrato activo.
+    {% elif user.rol == 'propietario' %}No tenés propiedades publicadas.
+    {% else %}No hay propiedades para mostrar.{% endif %}
+</p>
+{% endif %}
+
+{% if es_admin %}
+<div class="form-card">
+    <h3><i class="fa-solid fa-plus" style="color:#4f46e5;"></i> Nueva propiedad</h3>
+    {% if propietarios %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="field">
+                <label>Propietario *</label>
+                <select name="propietario_id" required>
+                    <option value="" selected disabled>Elegí un propietario</option>
+                    {% for o in propietarios %}
+                    <option value="{{ o.id }}">{{ o.nombre }} — {{ o.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Dirección *</label>
+                <input name="direccion" required placeholder="Av. Italia 1234">
+            </div>
+            <div class="field">
+                <label>Precio mensual ($) *</label>
+                <input name="precio_mensual" type="number" step="0.01" min="0" required placeholder="15000">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="field">
+                <label>Descripción *</label>
+                <textarea name="descripcion" rows="3" required placeholder="2 dorm, 1 baño, cocina equipada..."></textarea>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="field">
+                <label>Foto de la propiedad</label>
+                <div class="dropzone" id="dropzone" tabindex="0" role="button"
+                     onclick="document.getElementById('inputFoto').click()"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+                    <div class="dz-empty" id="dzEmpty">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Arrastrá una imagen acá o <strong>hacé clic para elegirla</strong></span>
+                        <small>JPG, PNG o WEBP · se guarda en el servidor de la web</small>
+                    </div>
+                    <div class="dz-filled" id="dzFilled">
+                        <img id="preview" src="" alt="Vista previa de la foto">
+                        <div class="dz-info">
+                            <span class="dz-name" id="dzName">imagen.jpg</span>
+                            <button type="button" class="dz-clear" onclick="quitarFoto(event)">
+                                <i class="fa-solid fa-xmark"></i> Quitar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="inputFoto" name="foto"
+                       accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                       style="display:none" onchange="mostrarFoto(this.files[0])">
+            </div>
+        </div>
+        <button class="btn" type="submit">Crear propiedad</button>
+    </form>
+    {% else %}
+    <p class="empty" style="padding:18px 0;">
+        <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i>
+        Necesitás al menos un usuario con rol <strong>propietario</strong> activo para registrar viviendas.
+        <a href="{% url 'usuarios:admin-usuarios' %}#crear-usuario" style="color:#4f46e5; font-weight:600;">Crear propietario</a>
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+<style>
+    .dropzone {
+        border: 2px dashed #c7d2fe;
+        border-radius: 16px;
+        background: #f8faff;
+        padding: 22px;
+        text-align: center;
+        cursor: pointer;
+        transition: all .25s ease;
+    }
+    .dropzone:hover, .dropzone:focus { border-color: #6366f1; background: #eef2ff; outline: none; }
+    .dropzone.drag { border-color: #4f46e5; background: #e0e7ff; transform: scale(1.01); }
+    .dz-empty i { font-size: 26px; color: #6366f1; display: block; margin-bottom: 8px; }
+    .dz-empty span { display: block; color: #475569; font-size: 14px; }
+    .dz-empty strong { color: #4f46e5; }
+    .dz-empty small { display: block; color: #94a3b8; margin-top: 6px; font-size: 12px; }
+    .dz-filled { display: none; }
+    .dropzone.con-foto .dz-empty { display: none; }
+    .dropzone.con-foto .dz-filled { display: block; }
+    .dz-filled img { width: 100%; max-height: 190px; object-fit: cover; border-radius: 12px; }
+    .dz-info { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
+    .dz-name { color: #334155; font-size: 13px; font-weight: 600; word-break: break-all; }
+    .dz-clear {
+        border: 1px solid #e2e8f0; background: white; color: #ef4444;
+        font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    }
+    .dz-clear:hover { background: #fef2f2; border-color: #fecaca; }
+
+    .fila-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .fila-acciones form { display: flex; align-items: center; gap: 6px; margin: 0; }
+    .btn-mini { padding: 6px 10px; font-size: 12px; border-radius: 8px; box-shadow: none; }
+    .btn-danger {
+        border: 1px solid #fecaca; background: white; color: #ef4444; border-radius: 8px;
+        padding: 6px 10px; font-size: 12px; cursor: pointer;
+    }
+    .btn-danger:hover { background: #fef2f2; }
+    .sin-borrar {
+        font-size: 12px; font-weight: 600; color: #94a3b8; border: 1px dashed #e2e8f0;
+        border-radius: 8px; padding: 6px 10px; white-space: nowrap;
+    }
+    .editar { position: relative; }
+    .editar summary {
+        cursor: pointer; list-style: none; font-size: 12px; font-weight: 600; color: #4f46e5;
+        border: 1px solid #c7d2fe; background: #eef2ff; padding: 6px 10px; border-radius: 8px;
+    }
+    .editar summary:hover { background: #e0e7ff; }
+    .editar[open] form {
+        /* .fila-acciones form lo pone en flex; el popover necesita apilar los campos */
+        display: block;
+        position: absolute; right: 0; top: 30px; z-index: 40; width: 280px; background: white;
+        border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;
+        box-shadow: 0 14px 30px rgba(15,23,42,.15);
+    }
+    .editar form label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin: 8px 0 4px; }
+    .editar form input, .editar form textarea, .editar form select {
+        width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+</style>
+
+{% if es_admin and propietarios %}
+<script>
+    const dz = document.getElementById('dropzone');
+
+    function mostrarFoto(archivo) {
+        if (!archivo) return quitarFoto();
+        document.getElementById('preview').src = URL.createObjectURL(archivo);
+        document.getElementById('dzName').textContent = archivo.name;
+        dz.classList.add('con-foto');
+    }
+
+    function quitarFoto(event) {
+        if (event) { event.stopPropagation(); }
+        const input = document.getElementById('inputFoto');
+        input.value = '';
+        document.getElementById('preview').src = '';
+        dz.classList.remove('con-foto');
+    }
+
+    ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => {
+        e.preventDefault(); dz.classList.add('drag');
+    }));
+    ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
+        e.preventDefault(); dz.classList.remove('drag');
+    }));
+    dz.addEventListener('drop', e => {
+        const archivo = e.dataTransfer.files[0];
+        if (archivo && archivo.type.startsWith('image/')) {
+            const input = document.getElementById('inputFoto');
+            const dt = new DataTransfer();
+            dt.items.add(archivo);
+            input.files = dt.files;
+            mostrarFoto(archivo);
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

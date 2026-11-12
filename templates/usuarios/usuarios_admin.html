@@ -1,0 +1,234 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-users-gear" style="color:#1e293b;"></i> Gestión de usuarios</h2>
+<p class="sub">
+    Todos los usuarios registrados en la plataforma. Podés buscarlos por nombre, email,
+    teléfono o ID, cambiar su rol, datos de contacto o contraseña.
+</p>
+
+<div class="form-card" style="margin-top:0; margin-bottom:24px;">
+    <form method="get" class="fila-acciones">
+        <div class="field" style="flex:1; min-width:220px;">
+            <label>Buscar usuario</label>
+            <input name="buscar" value="{{ buscar }}" placeholder="Nombre, email, teléfono o ID">
+        </div>
+        <div class="field" style="min-width:170px;">
+            <label>Rol</label>
+            <select name="rol">
+                <option value="">Todos</option>
+                <option value="administrador" {% if rol == 'administrador' %}selected{% endif %}>Administrador</option>
+                <option value="propietario" {% if rol == 'propietario' %}selected{% endif %}>Propietario</option>
+                <option value="inquilino" {% if rol == 'inquilino' %}selected{% endif %}>Inquilino</option>
+                <option value="visitante" {% if rol == 'visitante' %}selected{% endif %}>Visitante</option>
+            </select>
+        </div>
+        <button class="btn" type="submit" style="margin-top:22px;">
+            <i class="fa-solid fa-magnifying-glass"></i> Buscar
+        </button>
+        <a class="btn-alt" href="#crear-usuario">
+            <i class="fa-solid fa-user-plus"></i> Crear nuevo usuario
+        </a>
+    </form>
+</div>
+
+{% if usuarios %}
+<table>
+    <tr>
+        <th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th>
+        <th>Rol</th><th>Estado</th><th>Alta</th><th>Acciones</th>
+    </tr>
+    {% for u in usuarios %}
+    <tr>
+        <td>#{{ u.id }}</td>
+        <td><strong>{{ u.nombre }}</strong></td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.telefono|default:"—" }}</td>
+        <td>
+            <span class="pill {% if u.rol == 'administrador' %}pill-gray
+                         {% elif u.rol == 'propietario' %}pill-blue
+                         {% elif u.rol == 'inquilino' %}pill-green
+                         {% else %}pill-yellow{% endif %}">{{ u.rol }}</span>
+        </td>
+        <td>
+            {% if u.activo %}<span class="ok"><i class="fa-solid fa-circle-check"></i> activo</span>
+            {% else %}<span class="bad"><i class="fa-solid fa-circle-xmark"></i> inactivo</span>{% endif %}
+        </td>
+        <td>{{ u.created_at|date:"Y-m-d"|default:"—" }}</td>
+        <td>
+            <div class="fila-acciones">
+                <details class="editar">
+                    <summary><i class="fa-solid fa-pen"></i> Editar</summary>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="editar">
+                        <input type="hidden" name="usuario_id" value="{{ u.id }}">
+                        <label>Nombre</label>
+                        <input name="nombre" value="{{ u.nombre }}" minlength="3" maxlength="100" required>
+                        <label>Email</label>
+                        <input name="email" type="email" value="{{ u.email }}" required>
+                        <label>Teléfono (0991-2345)</label>
+                        <input name="telefono" value="{{ u.telefono|default_if_none:'' }}"
+                               pattern="^\d{4}-\d{4}$" placeholder="0991-2345">
+                        <label>Rol</label>
+                        <select name="rol">
+                            <option value="administrador" {% if u.rol == 'administrador' %}selected{% endif %}>administrador</option>
+                            <option value="propietario" {% if u.rol == 'propietario' %}selected{% endif %}>propietario</option>
+                            <option value="inquilino" {% if u.rol == 'inquilino' %}selected{% endif %}>inquilino</option>
+                            <option value="visitante" {% if u.rol == 'visitante' %}selected{% endif %}>visitante</option>
+                        </select>
+                        <label>Nueva contraseña (opcional, mínimo 6)</label>
+                        <input name="password" type="password" minlength="6" placeholder="dejar vacío = no cambia">
+                        <label class="chk">
+                            <input type="checkbox" name="activo" value="1" {% if u.activo %}checked{% endif %}>
+                            Usuario activo
+                        </label>
+                        <button class="btn btn-mini" type="submit">Guardar cambios</button>
+                    </form>
+                </details>
+
+                {% if u.id == user.pk %}
+                <span class="self" title="Estás editando tu propia cuenta">sos vos</span>
+                {% else %}
+                <form method="post"
+                      onsubmit="return confirm('¿Eliminar al usuario #{{ u.id }} ({{ u.nombre }})? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="eliminar">
+                    <input type="hidden" name="usuario_id" value="{{ u.id }}">
+                    <button class="btn-danger" type="submit" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i>
+    No se encontraron usuarios. Probá buscar un ID concreto o creá uno nuevo.</p>
+{% endif %}
+
+<div class="form-card crear-card" id="crear-usuario">
+    <h3><i class="fa-solid fa-user-plus" style="color:#4f46e5;"></i> Crear nuevo usuario</h3>
+    <p class="sub" style="margin-bottom:18px;">
+        Registra un nuevo usuario en la plataforma.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear">
+        <div class="grid-form">
+            <div class="field">
+                <label for="nombre">Nombre completo</label>
+                <input type="text" id="nombre" name="nombre" minlength="3" maxlength="100"
+                       placeholder="Ej. Juan Pérez" required
+                       value="{{ form_crear.nombre.value|default_if_none:'' }}">
+            </div>
+            <div class="field">
+                <label for="email">Correo electrónico</label>
+                <input type="email" id="email" name="email" placeholder="usuario@gmail.com" required
+                       value="{{ form_crear.email.value|default_if_none:'' }}">
+            </div>
+            <div class="field">
+                <label for="telefono">Teléfono</label>
+                <input type="text" id="telefono" name="telefono" pattern="[0-9]{4}-[0-9]{4}"
+                       placeholder="0991-2345"
+                       value="{{ form_crear.telefono.value|default_if_none:'' }}">
+            </div>
+            <div class="field">
+                <label for="rol">Rol del usuario</label>
+                <select id="rol" name="rol" required>
+                    <option value="">Seleccionar rol</option>
+                    <option value="administrador" {% if form_crear.rol.value == 'administrador' %}selected{% endif %}>Administrador</option>
+                    <option value="propietario" {% if form_crear.rol.value == 'propietario' %}selected{% endif %}>Propietario</option>
+                    <option value="inquilino" {% if form_crear.rol.value == 'inquilino' %}selected{% endif %}>Inquilino</option>
+                    
+                </select>
+            </div>
+            <div class="field">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" minlength="6"
+                       placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <div class="field">
+                <label for="password2">Confirmar contraseña</label>
+                <input type="password" id="password2" name="password2" minlength="6"
+                       placeholder="Repetir contraseña" required>
+            </div>
+        </div>
+        <label class="chk">
+            <input type="checkbox" name="activo" value="1"
+                   {% if form_crear.activo.value is not False %}checked{% endif %}>
+            Usuario activo
+        </label>
+        <div class="acciones">
+            <button class="btn" type="submit">
+                <i class="fa-solid fa-user-plus"></i> Crear usuario
+            </button>
+            <a href="{% url 'usuarios:admin-usuarios' %}" class="btn-cancelar">
+                <i class="fa-solid fa-arrow-left"></i> Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+
+<p class="nota"><i class="fa-solid fa-circle-info"></i>
+    El usuario administrador principal (ID 1) está protegido: la API no permite eliminarlo.</p>
+
+<style>
+    .fila-acciones { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+    .fila-acciones form { display: flex; align-items: center; gap: 6px; margin: 0; }
+    .btn-mini { padding: 6px 10px; font-size: 12px; border-radius: 8px; box-shadow: none; }
+    .btn-alt {
+        text-decoration: none; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 700;
+        color: #4f46e5; border: 1px solid #c7d2fe; background: #eef2ff;
+    }
+    .btn-alt:hover { background: #e0e7ff; }
+    .btn-danger {
+        border: 1px solid #fecaca; background: white; color: #ef4444; border-radius: 8px;
+        padding: 6px 10px; font-size: 12px; cursor: pointer;
+    }
+    .btn-danger:hover { background: #fef2f2; }
+    .ok { color: #059669; font-size: 13px; font-weight: 600; }
+    .bad { color: #dc2626; font-size: 13px; font-weight: 600; }
+    .self { font-size: 12px; color: #94a3b8; font-weight: 600; }
+    .nota { margin-top: 22px; font-size: 13px; color: #64748b; }
+    .nota i { color: #6366f1; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+    .editar { position: relative; }
+    .editar summary {
+        cursor: pointer; list-style: none; font-size: 12px; font-weight: 600; color: #4f46e5;
+        border: 1px solid #c7d2fe; background: #eef2ff; padding: 6px 10px; border-radius: 8px;
+    }
+    .editar summary:hover { background: #e0e7ff; }
+    .editar[open] form {
+        /* .fila-acciones form lo pone en flex; el popover necesita apilar los campos */
+        display: block;
+        position: absolute; right: 0; top: 30px; z-index: 40; width: 280px; background: white;
+        border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px;
+        box-shadow: 0 14px 30px rgba(15,23,42,.15);
+    }
+    .editar form label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin: 8px 0 4px; }
+    .editar form input, .editar form select {
+        width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; }
+    .editar form .chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .editar form .chk input { width: auto; }
+    .editar form .btn-mini { margin-top: 12px; }
+    .hint { color: #64748b; font-size: 13px; margin-top: 12px; }
+    .hint i { color: #6366f1; }
+    .crear-card .grid-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .crear-card .chk { display: flex; align-items: center; gap: 8px; margin-top: 20px; font-size: 14px; color: #475569; }
+    .crear-card .chk input { width: auto; }
+    .crear-card .acciones { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+    .crear-card .btn-cancelar {
+        text-decoration: none; padding: 12px 18px; border-radius: 10px;
+        border: 1px solid #cbd5e1; color: #475569; background: white;
+        font-weight: 600; font-size: 14px;
+    }
+    .crear-card .btn-cancelar:hover { background: #f1f5f9; }
+    @media (max-width: 600px) { .crear-card .grid-form { grid-template-columns: 1fr; } }
+    #crear-usuario { scroll-margin-top: 20px; }
+</style>
+{% endblock %}

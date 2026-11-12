@@ -1,0 +1,22 @@
+# Django y REST Framework
+Django>=4.2,<5.0
+djangorestframework>=3.14,<3.16
+djangorestframework-simplejwt>=5.3.0
+
+# Base de datos
+pymysql>=1.1.0
+
+# Variables de entorno
+python-decouple>=3.8
+
+# HTTP Client (para consumir la API FastAPI)
+requests>=2.31.0
+
+# CORS (para permitir comunicación entre Django y la API)
+django-cors-headers>=4.3.0
+
+# Imágenes (para manejo de uploads de fotos de propiedades)
+Pillow>=10.0.0
+
+# Utilidades de hashing (opcional, fallback para verificar contraseñas de la API)
+passlib[bcrypt]>=1.7.4

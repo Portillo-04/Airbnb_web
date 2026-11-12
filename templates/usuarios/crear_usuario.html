@@ -1,0 +1,71 @@
+
+{% extends "usuarios/base_panel.html" %}
+
+{% block title %}Crear Usuario{% endblock %}
+
+{% block panel %}
+
+<div class="form-card" style="max-width:700px; margin:0 auto;">
+
+    <h2>
+        <i class="fa-solid fa-user-plus" style="color:#4f46e5;"></i>
+        Crear Usuario
+    </h2>
+
+    <p class="sub">
+        Registra un nuevo usuario en la plataforma.
+    </p>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding:12px; margin-bottom:12px; border-radius:8px;
+                {% if message.tags == 'success' %}
+                    background:#dcfce7;color:#166534;
+                {% else %}
+                    background:#fee2e2;color:#991b1b;
+                {% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div class="field" style="margin-bottom:18px;">
+
+                <label style="display:block; font-weight:600; margin-bottom:6px;">
+                    {{ field.label }}
+                </label>
+
+                {{ field }}
+
+                {% if field.errors %}
+                    <div style="color:#dc2626;font-size:13px;">
+                        {{ field.errors|striptags }}
+                    </div>
+                {% endif %}
+
+            </div>
+        {% endfor %}
+
+        <div class="fila-acciones" style="margin-top:24px;">
+
+            <button class="btn" type="submit">
+                <i class="fa-solid fa-user-plus"></i>
+                Crear usuario
+            </button>
+
+            <a class="btn-alt" href="{% url 'usuarios:admin-usuarios' %}">
+                <i class="fa-solid fa-arrow-left"></i>
+                Volver a usuarios
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

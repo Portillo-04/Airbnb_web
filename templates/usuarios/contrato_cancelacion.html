@@ -1,0 +1,274 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cancelación de contrato #{{ contrato.id }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    @page { size: A4; margin: 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 32px 16px; background: #eef1f5;
+        font-family: "Segoe UI", Arial, sans-serif; color: #1e293b;
+        font-size: 13px; line-height: 1.5;
+    }
+    .hoja {
+        width: 210mm; min-height: 297mm; margin: 0 auto; padding: 18mm 16mm;
+        background: #fff; box-shadow: 0 8px 30px rgba(15, 23, 42, .12);
+    }
+    .acciones {
+        width: 210mm; margin: 0 auto 14px; display: flex; gap: 10px;
+        justify-content: flex-end;
+    }
+    .acciones a, .acciones button {
+        display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px;
+        border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer;
+        text-decoration: none; border: 1px solid #cbd5e1; background: #fff;
+        color: #334155; font-family: inherit;
+    }
+    .acciones .imprimir { background: #0f766e; border-color: #0f766e; color: #fff; }
+    .acciones .imprimir:hover { background: #115e59; }
+    .acciones a:hover { background: #f1f5f9; }
+
+    .encabezado { text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 14px; }
+    .encabezado .marca {
+        font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+        color: #64748b; font-weight: 700; margin-bottom: 6px;
+    }
+    .encabezado h1 {
+        margin: 0; font-size: 19px; letter-spacing: .6px; text-transform: uppercase;
+        color: #0f172a;
+    }
+    .encabezado .sub { margin-top: 4px; font-size: 12px; color: #475569; }
+
+    h2 {
+        font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+        color: #0f766e; margin: 20px 0 8px; padding-bottom: 4px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .datos { width: 100%; border-collapse: collapse; }
+    .datos td { padding: 3px 0; vertical-align: top; }
+    .datos td.etiqueta { width: 40%; color: #64748b; }
+    .datos td.valor { font-weight: 600; }
+    .partes { width: 100%; border-collapse: collapse; }
+    .partes td {
+        width: 50%; padding: 0 8px 0 0; vertical-align: top;
+    }
+    .partes td + td { padding: 0 0 0 8px; }
+    .parte {
+        border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+        height: 100%;
+    }
+    .parte .rol {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+        color: #0f766e; font-weight: 700; margin-bottom: 4px;
+    }
+    .parte .nombre { font-weight: 700; font-size: 13px; }
+    .parte .contacto { color: #475569; font-size: 12px; }
+    .lugar-fecha {
+        margin: 16px 0 0; display: flex; gap: 24px; flex-wrap: wrap;
+        font-size: 13px;
+    }
+    .lugar-fecha .linea {
+        display: inline-block; min-width: 170px; border-bottom: 1px solid #94a3b8;
+        height: 17px;
+    }
+    .declaracion p { margin: 0 0 10px; text-align: justify; }
+    .destacado {
+        background: #f8fafc; border-left: 3px solid #0f766e;
+        padding: 10px 14px; margin: 12px 0; border-radius: 0 6px 6px 0;
+    }
+    .destacado strong { color: #0f172a; }
+    .renglones .renglon {
+        border-bottom: 1px solid #cbd5e1; height: 24px;
+    }
+    .firmas {
+        width: 100%; border-collapse: collapse; margin-top: 34px;
+        table-layout: fixed;
+    }
+    .firmas td { width: 33.33%; padding: 0 8px; text-align: center; vertical-align: bottom; }
+    .firmas td:first-child { padding-left: 0; }
+    .firmas td:last-child { padding-right: 0; }
+    .firma-linea { border-top: 1px solid #334155; margin-top: 44px; padding-top: 5px; }
+    .firma-rol { font-size: 11px; color: #475569; }
+    .firma-nombre {
+        font-size: 11px; color: #0f172a; font-weight: 600;
+        min-height: 15px; word-wrap: break-word;
+    }
+    .pie {
+        margin-top: 26px; padding-top: 8px; border-top: 1px solid #e2e8f0;
+        font-size: 10px; color: #94a3b8; display: flex;
+        justify-content: space-between; gap: 12px;
+    }
+    .nota { margin-top: 8px; font-size: 11px; color: #64748b; }
+
+    @media print {
+        body { background: #fff; padding: 0; }
+        .no-print { display: none !important; }
+        .hoja { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+        .parte { border-color: #cbd5e1; }
+    }
+</style>
+</head>
+<body>
+
+<div class="acciones no-print">
+    <a href="{% url 'usuarios:contratos' %}"><i class="fa-solid fa-arrow-left"></i> Volver a contratos</a>
+    <button type="button" class="imprimir" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Imprimir / Guardar PDF
+    </button>
+</div>
+
+<div class="hoja">
+    <div class="encabezado">
+        <div class="marca">Gestión de alquileres</div>
+        <h1>Formato de cancelación de contrato de alquiler</h1>
+        <div class="sub">Rescisión de común acuerdo entre las partes</div>
+    </div>
+
+    <h2>1. Datos del contrato</h2>
+    <table class="datos">
+        <tr>
+            <td class="etiqueta">Contrato N°</td>
+            <td class="valor">#{{ contrato.id }}</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Fecha de inicio</td>
+            <td class="valor">{{ inicio|default:"—" }}</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Fecha de finalización pactada</td>
+            <td class="valor">{{ fin|default:"—" }}</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Canon mensual</td>
+            <td class="valor">${{ resumen.precio|floatformat:"2g" }}</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Estado actual</td>
+            <td class="valor">{{ contrato.estado|capfirst }}</td>
+        </tr>
+    </table>
+
+    <h2>2. Vivienda</h2>
+    <table class="datos">
+        <tr>
+            <td class="etiqueta">Dirección</td>
+            <td class="valor">{{ propiedad.direccion|default:"—" }}</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Descripción</td>
+            <td class="valor">{{ propiedad.descripcion|default:"—" }}</td>
+        </tr>
+    </table>
+
+    <h2>3. Partes intervinientes</h2>
+    <table class="partes">
+        <tr>
+            <td>
+                <div class="parte">
+                    <div class="rol">Propietario</div>
+                    <div class="nombre">{{ propietario.nombre|default:"—" }}</div>
+                    <div class="contacto">
+                        {{ propietario.email|default:"" }}{% if propietario.telefono %}
+                        · Tel. {{ propietario.telefono }}{% endif %}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="parte">
+                    <div class="rol">Inquilino</div>
+                    <div class="nombre">{{ inquilino.nombre|default:"—" }}</div>
+                    <div class="contacto">
+                        {{ inquilino.email|default:"" }}{% if inquilino.telefono %}
+                        · Tel. {{ inquilino.telefono }}{% endif %}
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <h2>4. Declaración de rescisión</h2>
+    <div class="declaracion">
+        <p>
+            Las partes que suscriben, en su carácter de propietario e inquilino de la
+            vivienda indicada en el punto 2, acuerdan dejar sin efecto el contrato de
+            alquiler individualizado en el punto 1, a partir del
+            <span class="linea" style="min-width:120px;"></span>, dejando sin efecto
+            las obligaciones posteriores a esa fecha salvo las que se detallan en la
+            liquidación del punto 5.
+        </p>
+        <div class="destacado">
+            <strong>Estado de la cuenta al día de hoy:</strong>
+            {{ resumen.meses_pagados }} de {{ resumen.meses_esperados }} meses pagados.
+            {% if resumen.pendientes %}
+            Meses pendientes: <strong>{{ resumen.pendientes|length }}</strong>
+            {% if resumen.pendientes|length == 1 %}mes{% else %}meses{% endif %}.
+            Saldo a regularizar: <strong>${{ resumen.saldo|floatformat:"2g" }}</strong>.
+            {% else %}
+            Sin saldo pendiente a la fecha.
+            {% endif %}
+        </div>
+    </div>
+
+    <h2>5. Liquidación y entrega</h2>
+    <div class="renglones">
+        <div class="renglon"></div>
+        <div class="renglon"></div>
+    </div>
+
+    <h2>6. Motivo de la cancelación</h2>
+    <div class="renglones">
+        <div class="renglon"></div>
+        <div class="renglon"></div>
+        <div class="renglon"></div>
+    </div>
+
+    <h2>7. Observaciones</h2>
+    <div class="renglones">
+        <div class="renglon"></div>
+        <div class="renglon"></div>
+    </div>
+
+    <div class="lugar-fecha">
+        <div>Lugar: <span class="linea"></span></div>
+        <div>Fecha: <span class="linea" style="min-width:120px;"></span></div>
+    </div>
+
+    <table class="firmas">
+        <tr>
+            <td>
+                <div class="firma-linea">
+                    <div class="firma-nombre">{{ propietario.nombre|default:"" }}</div>
+                    <div class="firma-rol">Propietario</div>
+                </div>
+            </td>
+            <td>
+                <div class="firma-linea">
+                    <div class="firma-nombre">{{ inquilino.nombre|default:"" }}</div>
+                    <div class="firma-rol">Inquilino</div>
+                </div>
+            </td>
+            <td>
+                <div class="firma-linea">
+                    <div class="firma-nombre">{{ request.user.get_full_name|default:request.user.username }}</div>
+                    <div class="firma-rol">Administrador</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="nota">
+        El presente formato no reemplaza la conformidad de las partes: se firma por
+        duplicado y cada parte conserva un ejemplar.
+    </div>
+
+    <div class="pie">
+        <span>Contrato #{{ contrato.id }} · {{ propiedad.direccion|default:"" }}</span>
+        <span>Generado el {{ hoy }}</span>
+    </div>
+</div>
+
+</body>
+</html>

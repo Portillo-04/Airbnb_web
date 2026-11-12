@@ -1,0 +1,385 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Solicitudes de Alquiler{% endblock %}
+
+{% block head %}
+<style>
+    .villas-pantalla {
+        --coast: #0f766e; --coast-dark: #115e59; --coast-light: #14b8a6;
+        --sand: #fdf6e3; --sand-line: #fde68a; --ink: #134e4a; --muted: #5f7a76;
+    }
+    .villas-hero { position: relative; overflow: hidden; border-radius: 24px; padding: 28px;
+        margin-bottom: 24px; color: white;
+        background: linear-gradient(135deg, #0f766e, #14b8a6 65%, #67e8f9); }
+    .villas-hero::after { content: ""; position: absolute; width: 240px; height: 240px;
+        right: -70px; top: -90px; border-radius: 50%;
+        background: rgba(255,255,255,.16); }
+    .villas-hero::before { content: ""; position: absolute; width: 150px; height: 150px;
+        right: 40px; bottom: -100px; border-radius: 50%;
+        background: rgba(255,255,255,.1); }
+    .villas-hero h2 { color: white; font-size: 27px; letter-spacing: -.6px; margin-bottom: 8px;
+        position: relative; z-index: 1; }
+    .villas-hero p { font-size: 14px; max-width: 560px; color: rgba(255,255,255,.88);
+        position: relative; z-index: 1; }
+    .villas-hero .cont { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+        background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35);
+        padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;
+        letter-spacing: .2px; position: relative; z-index: 1; }
+
+    .villas-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .8fr);
+        gap: 22px; align-items: start; }
+    @media (max-width: 980px) { .villas-layout { grid-template-columns: 1fr; } }
+
+    .villas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 16px; }
+    .villa-card { position: relative; display: flex; flex-direction: column; background: white;
+        border: 2px solid #e2e8f0; border-radius: 18px; overflow: hidden; cursor: pointer;
+        transition: all .22s cubic-bezier(.4,0,.2,1); }
+    .villa-card:hover { transform: translateY(-3px); border-color: #99f6e4;
+        box-shadow: 0 14px 26px rgba(15,118,110,.13); }
+    .villa-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .villa-card.seleccionada { border-color: var(--coast);
+        box-shadow: 0 16px 30px rgba(15,118,110,.22); }
+    .villa-foto { position: relative; height: 168px; display: flex; align-items: center;
+        justify-content: center; overflow: hidden;
+        background: linear-gradient(135deg, #ccfbf1, #e0f2fe); }
+    .villa-foto img { width: 100%; height: 100%; object-fit: cover; }
+    .villa-foto .sinfoto { color: #5eead4; font-size: 38px; }
+    .villa-foto .villa-precio { position: absolute; left: 10px; bottom: 10px;
+        background: rgba(19,78,74,.9); color: white; font-size: 13px; font-weight: 800;
+        padding: 6px 12px; border-radius: 999px; backdrop-filter: blur(4px); }
+    .villa-foto .villa-precio small { font-size: 10px; opacity: .75; font-weight: 600; }
+    .villa-card .villa-info { padding: 14px 16px 16px; display: flex; flex-direction: column;
+        gap: 5px; flex-grow: 1; }
+    .villa-card .villa-info strong { color: var(--ink); font-size: 15px; line-height: 1.3; }
+    .villa-card .villa-info .villa-desc { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .villa-card .villa-check { margin-top: auto; padding-top: 8px; font-size: 12px;
+        font-weight: 800; color: var(--coast); display: inline-flex; align-items: center; gap: 6px; }
+    .villa-card.seleccionada .villa-check .texto { display: none; }
+    .villa-card.seleccionada .villa-check::after { content: "Elegida"; }
+
+    .reserva-card { position: sticky; top: 18px; background: white; border: 1px solid #e2e8f0;
+        border-radius: 22px; overflow: hidden; box-shadow: 0 14px 34px rgba(15,23,42,.09); }
+    .reserva-foto { height: 148px; display: none; background: linear-gradient(135deg, #ccfbf1, #e0f2fe); }
+    .reserva-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .reserva-cuerpo { padding: 20px; }
+    .reserva-eyebrow { display: block; font-size: 10px; letter-spacing: .16em;
+        text-transform: uppercase; color: var(--coast); font-weight: 800; margin-bottom: 6px; }
+    .reserva-cuerpo h3 { font-size: 19px; color: var(--ink); letter-spacing: -.3px;
+        margin-bottom: 14px; line-height: 1.25; }
+    .reserva-fechas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        margin-bottom: 16px; }
+    .reserva-fechas .campo { display: flex; flex-direction: column; gap: 5px; }
+    .reserva-fechas label { font-size: 11px; font-weight: 800; color: #334155;
+        text-transform: uppercase; letter-spacing: .04em; }
+    .reserva-fechas input { width: 100%; padding: 10px 11px; border: 1px solid #d7e3e1;
+        border-radius: 10px; font-size: 13px; background: #f8fafc; color: var(--ink);
+        outline: none; }
+    .reserva-fechas input:focus { border-color: var(--coast); background: white;
+        box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+
+    .reserva-resumen { background: var(--sand); border: 1px solid var(--sand-line);
+        border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+    .reserva-resumen div { display: flex; justify-content: space-between; align-items: center;
+        font-size: 13px; color: #78716c; padding: 3px 0; }
+    .reserva-resumen div strong { color: #44403c; font-weight: 700; }
+    .reserva-resumen .total { margin-top: 8px; padding-top: 10px;
+        border-top: 1px dashed #e7d8a8; }
+    .reserva-resumen .total strong { font-size: 22px; color: var(--coast-dark);
+        letter-spacing: -.5px; }
+    .reserva-resumen .nota { font-size: 11px; color: #a8a29e; line-height: 1.4;
+        margin-top: 6px; }
+
+    .btn-reservar { width: 100%; padding: 14px; border: none; border-radius: 12px;
+        background: linear-gradient(135deg, var(--coast), var(--coast-light)); color: white;
+        font-size: 15px; font-weight: 800; cursor: pointer; display: inline-flex;
+        align-items: center; justify-content: center; gap: 9px;
+        box-shadow: 0 12px 22px -8px rgba(15,118,110,.65); transition: transform .2s;
+    }
+    .btn-reservar:hover { transform: translateY(-1px); }
+
+    .villas-vacio { background: white; border: 1px dashed #cbd5e1; border-radius: 18px;
+        padding: 40px 24px; text-align: center; color: #64748b; font-size: 14px; }
+    .villas-vacio i { display: block; font-size: 34px; color: #5eead4; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-handshake-simple" style="color:#8b5cf6;"></i> Solicitudes de Alquiler</h2>
+<p class="sub">
+    {% if es_propietario %}Solicitudes recibidas sobre tus propiedades. Respondé con APROBADA (se crea el contrato automáticamente), RECHAZADA o POSPUESTA.
+    {% elif es_inquilino %}Enviá una solicitud sobre una propiedad disponible.
+    {% else %}Panel de solicitudes de alquiler.{% endif %}
+</p>
+
+{% if lista_no_disponible %}
+<div class="alert" style="margin-bottom:18px;">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    El servidor no está devolviendo las solicitudes de alquiler (error HTTP 500).
+    Se muestran las que quedaron guardadas en esta web.
+</div>
+{% endif %}
+
+{% if solicitudes %}
+<table>
+    <tr>
+        <th>ID</th><th>Inquilino</th><th>Propiedad</th><th>Desde</th>
+        <th>Hasta</th><th>Estado</th><th>Respuesta</th>
+        {% if es_propietario %}<th>Responder</th>{% endif %}
+    </tr>
+    {% for sol in solicitudes %}
+    <tr>
+        <td>#{{ sol.id }}</td>
+        <td><strong>{{ sol.inquilino_nombre|default:sol.inquilino_id }}</strong></td>
+        <td>
+            {% if sol.propiedad_direccion %}{{ sol.propiedad_direccion }}<br><small style="color:#64748b;">#{{ sol.propiedad_id }}</small>
+            {% else %}#{{ sol.propiedad_id }}{% endif %}
+        </td>
+        <td>{{ sol.fecha_inicio }}</td>
+        <td>{{ sol.fecha_fin }}</td>
+        <td>
+            <span class="pill {% if sol.estado == 'APROBADA' %}pill-green
+                         {% elif sol.estado == 'RECHAZADA' %}pill-red
+                         {% elif sol.estado == 'POSPUESTA' %}pill-yellow
+                         {% else %}pill-blue{% endif %}">{{ sol.estado }}</span>
+        </td>
+        <td>{{ sol.respuesta_propietario|default:"-" }}</td>
+        {% if es_propietario %}
+        <td>
+            <form method="post" style="display:flex; flex-direction:column; gap:6px; min-width:190px;">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="responder">
+                <input type="hidden" name="solicitud_id" value="{{ sol.id }}">
+                <input type="hidden" name="api_id" value="{{ sol.api_id|default:'' }}">
+                <input type="hidden" name="propiedad_id" value="{{ sol.propiedad_id }}">
+                <input type="hidden" name="propiedad_direccion" value="{{ sol.propiedad_direccion }}">
+                <input type="hidden" name="inquilino_id" value="{{ sol.inquilino_id }}">
+                <input type="hidden" name="inquilino_nombre" value="{{ sol.inquilino_nombre }}">
+                <input type="hidden" name="fecha_inicio" value="{{ sol.fecha_inicio }}">
+                <input type="hidden" name="fecha_fin" value="{{ sol.fecha_fin }}">
+                <select name="nuevo_estado" style="padding:6px; border-radius:8px; border:1px solid #e2e8f0; font-size:12px;">
+                    <option value="APROBADA">APROBADA</option>
+                    <option value="RECHAZADA">RECHAZADA</option>
+                    <option value="POSPUESTA">POSPUESTA</option>
+                    <option value="PENDIENTE">PENDIENTE</option>
+                </select>
+                <input name="respuesta" placeholder="Mensaje (opcional)"
+                       style="padding:6px; border-radius:8px; border:1px solid #e2e8f0; font-size:12px;">
+                <button class="btn btn-sm" type="submit">Enviar</button>
+            </form>
+        </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% elif not es_inquilino %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i> No hay solicitudes de alquiler.</p>
+{% if es_propietario and mis_viviendas %}
+<div class="form-card" style="margin-top:18px;">
+    <h3><i class="fa-solid fa-house-chimney" style="color:#8b5cf6;"></i> Tus viviendas</h3>
+    <p class="sub" style="margin-bottom:14px;">
+        Solo las viviendas en estado DISPONIBLE reciben solicitudes de alquiler.
+    </p>
+    <table>
+        <tr><th>Vivienda</th><th>Estado</th><th>Situación</th></tr>
+        {% for v in mis_viviendas %}
+        <tr>
+            <td><strong>#{{ v.id }}</strong> — {{ v.direccion|default:"—" }}</td>
+            <td>
+                <span class="pill {% if v.estado == 'DISPONIBLE' %}pill-green
+                             {% elif v.estado == 'ALQUILADA' %}pill-blue
+                             {% elif v.estado == 'MANTENIMIENTO' %}pill-yellow
+                             {% else %}pill-gray{% endif %}">{{ v.estado|default:"—" }}</span>
+            </td>
+            <td>
+                {% if v.estado == 'MANTENIMIENTO' %}
+                <a href="{% url 'usuarios:mantenimiento' %}" style="color:#b45309; font-weight:600;">
+                    Reparala en Mantenimiento para publicarla</a>
+                {% elif v.estado == 'DISPONIBLE' %}
+                <span style="color:#15803d; font-weight:600;">Lista para recibir solicitudes</span>
+                {% elif v.estado == 'ALQUILADA' %}
+                <span style="color:#64748b;">Alquilada con contrato activo</span>
+                {% else %}
+                <span style="color:#64748b;">Sin estado publicado</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+{% endif %}
+
+{% if es_inquilino %}
+<div class="villas-pantalla">
+    <section class="villas-hero">
+        <h2>solicitá el alquiler</h2>
+        <p>Mirá las viviendas disponibles, elegí una, marcá desde y hasta cuándo
+           la querés y enviá la solicitud al propietario.</p>
+        <span class="cont"><i class="fa-solid fa-house-chimney"></i>
+            {{ disponibles|length }} vivienda{{ disponibles|length|pluralize:"s" }}
+            disponible{{ disponibles|length|pluralize:"s" }}</span>
+    </section>
+
+    {% if disponibles %}
+    <form method="post" id="formSolicitud" class="villas-layout">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear">
+
+        <div class="villas-grid">
+            {% for p in disponibles %}
+            <label class="villa-card">
+                <input type="radio" name="propiedad_id" value="{{ p.id }}"
+                       data-precio="{{ p.precio_mensual }}"
+                       data-direccion="{{ p.direccion }}"
+                       {% if forloop.first %}checked{% endif %} required>
+                <div class="villa-foto">
+                    {% if p.imagen_url %}
+                    <img src="{{ p.imagen_url }}"
+                         alt="Foto de {{ p.direccion }}">
+                    {% else %}
+                    <i class="fa-regular fa-image sinfoto"></i>
+                    {% endif %}
+                    <span class="villa-precio">${{ p.precio_mensual|floatformat:0 }} <small>/ mes</small></span>
+                </div>
+                <div class="villa-info">
+                    <strong>{{ p.direccion }}</strong>
+                    <span class="villa-desc">{{ p.descripcion|truncatechars:80 }}</span>
+                    <span class="villa-check"><i class="fa-regular fa-circle-check"></i> <span class="texto">Elegir</span></span>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+
+        <aside class="reserva-card">
+            <div class="reserva-foto" id="reservaFotoCaja">
+                <img id="reservaFoto" alt="">
+            </div>
+            <div class="reserva-cuerpo">
+                <span class="reserva-eyebrow">Tu solicitud</span>
+                <h3 id="reservaTitulo">{{ disponibles.0.direccion }}</h3>
+
+                <div class="reserva-fechas">
+                    <div class="campo">
+                        <label for="fechaInicio">Desde *</label>
+                        <input id="fechaInicio" name="fecha_inicio" type="date" required>
+                    </div>
+                    <div class="campo">
+                        <label for="fechaFin">Hasta *</label>
+                        <input id="fechaFin" name="fecha_fin" type="date" required>
+                    </div>
+                </div>
+
+                <div class="reserva-resumen">
+                    <div><span>Precio mensual</span>
+                         <strong id="resumenPrecio">${{ disponibles.0.precio_mensual|floatformat:0 }}</strong></div>
+                    <div><span>Meses estimados</span><strong id="resumenMeses">—</strong></div>
+                    <div class="total"><span>Total estimado</span><strong id="resumenTotal">$0</strong></div>
+                    <p class="nota">Es una estimación según los meses entre las fechas.
+                       El contrato final lo define el propietario.</p>
+                </div>
+
+                <button class="btn-reservar" type="submit">
+                    <i class="fa-solid fa-paper-plane"></i> Solicitar alquiler
+                </button>
+            </div>
+        </aside>
+    </form>
+    {% else %}
+    <div class="villas-vacio">
+        <i class="fa-solid fa-umbrella-beach"></i>
+        No hay propiedades <strong>DISPONIBLES</strong> para solicitar.
+        Las que existen están ALQUILADAS por un contrato activo: el propietario
+        debe publicar una nueva (módulo Propiedades) o finalizar el contrato.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById('formSolicitud');
+        if (!form) return;
+
+        const tarjetas = Array.from(form.querySelectorAll('.villa-card'));
+        const radios = Array.from(form.querySelectorAll('input[name=propiedad_id]'));
+        const titulo = document.getElementById('reservaTitulo');
+        const precioTexto = document.getElementById('resumenPrecio');
+        const mesesTexto = document.getElementById('resumenMeses');
+        const totalTexto = document.getElementById('resumenTotal');
+        const fotoCaja = document.getElementById('reservaFotoCaja');
+        const foto = document.getElementById('reservaFoto');
+        const desde = document.getElementById('fechaInicio');
+        const hasta = document.getElementById('fechaFin');
+        const formato = new Intl.NumberFormat('es-AR');
+        let precio = 0;
+
+        function calcular() {
+            let meses = 0;
+            if (desde.value && hasta.value) {
+                const a = new Date(desde.value + 'T00:00:00');
+                const b = new Date(hasta.value + 'T00:00:00');
+                if (b >= a) {
+                    meses = (b.getFullYear() - a.getFullYear()) * 12
+                        + (b.getMonth() - a.getMonth());
+                    if (b.getDate() > a.getDate()) meses += 1;
+                    meses = Math.max(1, meses);
+                }
+            }
+            mesesTexto.textContent = meses
+                ? meses + (meses === 1 ? ' mes' : ' meses')
+                : '—';
+            totalTexto.textContent = meses
+                ? '$' + formato.format(precio * meses)
+                : '$0';
+        }
+
+        function seleccionar() {
+            const elegido = form.querySelector('input[name=propiedad_id]:checked');
+            tarjetas.forEach(function (tarjeta) {
+                tarjeta.classList.toggle('seleccionada',
+                    tarjeta.contains(elegido));
+            });
+            if (!elegido) return;
+            precio = parseFloat(elegido.dataset.precio) || 0;
+            titulo.textContent = elegido.dataset.direccion || '';
+            precioTexto.textContent = '$' + formato.format(precio);
+            const imagen = elegido.closest('.villa-card').querySelector('.villa-foto img');
+            if (imagen) {
+                foto.src = imagen.src;
+                foto.alt = elegido.dataset.direccion || '';
+                fotoCaja.style.display = 'block';
+            } else {
+                foto.removeAttribute('src');
+                fotoCaja.style.display = 'none';
+            }
+            calcular();
+        }
+
+        radios.forEach(function (radio) {
+            radio.addEventListener('change', seleccionar);
+        });
+        function diaSiguiente(iso) {
+            const d = new Date(iso + 'T00:00:00');
+            d.setDate(d.getDate() + 1);
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + mes + '-' + dia;
+        }
+
+        desde.addEventListener('change', function () {
+            if (desde.value) {
+                hasta.min = diaSiguiente(desde.value);
+                if (hasta.value && hasta.value < hasta.min) hasta.value = '';
+            }
+            calcular();
+        });
+        hasta.addEventListener('change', calcular);
+
+        const hoy = new Date();
+        hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+        desde.min = hoy.toISOString().slice(0, 10);
+
+        seleccionar();
+    })();
+</script>
+{% endif %}
+{% endblock %}

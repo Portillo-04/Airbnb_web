@@ -1,0 +1,55 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Solicitudes de Visita{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-calendar-check" style="color:#8b5cf6;"></i> Solicitudes de Visita</h2>
+<p class="sub">Personas interesadas en visitar tus propiedades. Aprobá, rechazá o marcá como completada cada solicitud.</p>
+
+{% if solicitudes %}
+<table>
+    <tr>
+        <th>ID</th><th>Visitante</th><th>Vivienda</th>
+        <th>Fecha solicitada</th><th>Mensaje</th><th>Estado</th><th>Tu respuesta</th><th>Responder</th>
+    </tr>
+    {% for sol in solicitudes %}
+    <tr>
+        <td>#{{ sol.id }}</td>
+        <td>
+            {% if sol.visitante_nombre %}{{ sol.visitante_nombre }}<br><small style="color:#64748b;">#{{ sol.visitante_id }}</small>
+            {% else %}#{{ sol.visitante_id }}{% endif %}
+        </td>
+        <td>
+            {% if sol.propiedad_direccion %}{{ sol.propiedad_direccion }}<br><small style="color:#64748b;">#{{ sol.propiedad_id }}</small>
+            {% else %}#{{ sol.propiedad_id }}{% endif %}
+        </td>
+        <td>{{ sol.fecha_solicitada|slice:"8:10" }}/{{ sol.fecha_solicitada|slice:"5:7" }}/{{ sol.fecha_solicitada|slice:":4" }}{% if "T" in sol.fecha_solicitada %} {{ sol.fecha_solicitada|slice:"11:16" }}{% endif %}</td>
+        <td style="max-width:260px;">{{ sol.mensaje|default:"-"|truncatechars:70 }}</td>
+        <td>
+            <span class="pill {% if sol.estado == 'APROBADA' %}pill-green
+                         {% elif sol.estado == 'RECHAZADA' %}pill-red
+                         {% elif sol.estado == 'COMPLETADA' %}pill-blue
+                         {% else %}pill-yellow{% endif %}">{{ sol.estado }}</span>
+        </td>
+        <td style="max-width:180px;">{{ sol.respuesta_propietario|default:"-" }}</td>
+        <td>
+            <form method="post" style="display:flex; flex-direction:column; gap:6px; min-width:180px;">
+                {% csrf_token %}
+                <input type="hidden" name="solicitud_id" value="{{ sol.id }}">
+                <select name="nuevo_estado" style="padding:6px; border-radius:8px; border:1px solid #e2e8f0; font-size:12px;">
+                    <option value="APROBADA" {% if sol.estado == 'APROBADA' %}selected{% endif %}>APROBADA</option>
+                    <option value="RECHAZADA" {% if sol.estado == 'RECHAZADA' %}selected{% endif %}>RECHAZADA</option>
+                    <option value="COMPLETADA" {% if sol.estado == 'COMPLETADA' %}selected{% endif %}>COMPLETADA</option>
+                    <option value="PENDIENTE" {% if sol.estado == 'PENDIENTE' %}selected{% endif %}>PENDIENTE</option>
+                </select>
+                <input name="respuesta" maxlength="500" placeholder="Mensaje (opcional)"
+                       style="padding:6px; border-radius:8px; border:1px solid #e2e8f0; font-size:12px;">
+                <button class="btn btn-sm" type="submit">Enviar</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty"><i class="fa-regular fa-folder-open"></i> No hay solicitudes de visita.</p>
+{% endif %}
+{% endblock %}

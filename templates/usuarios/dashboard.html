@@ -1,0 +1,29 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}{% if catalogo %}{% include "usuarios/_catalogo_estilos.html" %}{% endif %}{% endblock %}
+
+{% block panel %}
+<h2 style="margin-bottom:4px;">Resumen</h2>
+<p class="sub">Tocá una tarjeta para ir al módulo.</p>
+
+<div class="stats-grid">
+    {% for s in stats %}
+    <a href="{{ s.url }}" class="stat-card">
+        <span class="stat-icon {{ s.bg }}"><i class="fa-solid {{ s.icon }}"></i></span>
+        <span>
+            <span class="stat-num">{{ s.num }}</span>
+            <div class="stat-label">{{ s.label }}</div>
+        </span>
+    </a>
+    {% empty %}
+    <p class="empty">Todavía no hay datos para mostrar.</p>
+    {% endfor %}
+</div>
+
+{% if catalogo %}
+<section id="viviendas-disponibles" style="margin-top:32px;">
+    {% include "usuarios/_catalogo.html" with propiedades=catalogo.propiedades api_ok=catalogo.api_ok api_base=catalogo.api_base q=catalogo.q precio_min=catalogo.precio_min precio_max=catalogo.precio_max orden=catalogo.orden con_foto=catalogo.con_foto catalogo_url=catalogo.catalogo_url en_panel=catalogo.en_panel %}
+</section>
+{% endif %}
+{% endblock %}

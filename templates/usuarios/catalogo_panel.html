@@ -1,0 +1,11 @@
+{% extends "usuarios/base_panel.html" %}
+{% block title %}Catálogo{% endblock %}
+
+{% block head %}{% include "usuarios/_catalogo_estilos.html" %}{% endblock %}
+
+{% block panel %}
+<h2><i class="fa-solid fa-house-magnifying-glass" style="color:#3b82f6;"></i> Catálogo</h2>
+<p class="sub">Viviendas disponibles en alquiler: mirá fotos, precio y detalles.</p>
+
+{% include "usuarios/_catalogo.html" %}
+{% endblock %}

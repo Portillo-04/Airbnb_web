@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Viviendas en alquiler{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --brand: #4f46e5; --brand-dark: #4338ca; --ink: #1e293b; --muted: #64748b; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: #f8fafc; color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; }
+
+        .topbar { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            box-shadow: 0 4px 20px rgba(79,70,229,.3); position: sticky; top: 0; z-index: 100; }
+        .topbar-inner { max-width: 1180px; margin: 0 auto; padding: 14px 20px; display: flex;
+            align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .brand { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none;
+            font-weight: 800; font-size: 19px; letter-spacing: -.3px; }
+        .brand i { background: rgba(255,255,255,.18); width: 38px; height: 38px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .top-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .top-links a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 9px 16px;
+            border-radius: 999px; transition: all .2s; }
+        .btn-ghost { color: white; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); }
+        .btn-ghost:hover { background: rgba(255,255,255,.2); }
+        .btn-solid { background: white; color: var(--brand); }
+        .btn-solid:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15,23,42,.18); }
+        .who { color: rgba(255,255,255,.9); font-size: 13px; font-weight: 600; }
+
+        .page { width: 100%; max-width: 1180px; margin: 0 auto; padding: 30px 20px 50px; flex-grow: 1; }
+
+        .alert { padding: 13px 16px; border-radius: 12px; margin-bottom: 18px; font-size: 14px;
+            font-weight: 600; background: #fee2e2; color: #991b1b; }
+        .alert.success { background: #dcfce7; color: #166534; }
+        .alert.info { background: #eef2ff; color: #3730a3; }
+
+        .footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 22px 20px; }
+
+        @media (max-width: 640px) {
+            .topbar-inner { padding: 12px 14px; gap: 10px; }
+            .top-links a { padding: 8px 12px; font-size: 13px; }
+            .page { padding: 20px 14px 40px; }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="{% url 'usuarios:catalogo' %}">
+            <i class="fa-solid fa-house-chimney"></i> Alquileres
+        </a>
+        <div class="top-links">
+            <a class="btn-ghost" href="{% url 'usuarios:catalogo' %}">
+                <i class="fa-solid fa-house-magnifying-glass"></i> Catálogo
+            </a>
+            {% if user.is_authenticated %}
+                <span class="who"><i class="fa-solid fa-user"></i> {{ user.username }}</span>
+                <a class="btn-ghost" href="{% url 'usuarios:dashboard' %}">
+                    <i class="fa-solid fa-gauge"></i> Mi panel
+                </a>
+                <a class="btn-solid" href="{% url 'usuarios:logout' %}">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Salir
+                </a>
+            {% else %}
+                <a class="btn-ghost" href="{% url 'usuarios:custom-login' %}">
+                    <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+                </a>
+                <a class="btn-solid" href="{% url 'usuarios:register' %}">
+                    <i class="fa-solid fa-user-plus"></i> Crear cuenta
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="page">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">Plataforma de alquileres · Gestión de viviendas, contratos y pagos</footer>
+
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Usuario</title>
+    <!-- Iconos de FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-card {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            color: #1e293b;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input, 
+        .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Estilo personalizado para el Select */
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 16px;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -3px rgba(79, 70, 229, 0.4);
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .login-link a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .login-link a:hover { text-decoration: underline; }
+
+        .alert {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .success {
+            background: #dcfce7;
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="register-card">
+        <div class="header-title">
+            <i class="fa-solid fa-house-chimney-user" style="color: #4f46e5;"></i>
+            Crear Cuenta
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}success{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- FORMULARIO QUE ENVÍA A /usuarios/register -->
+        <form method="post" action="{% url 'usuarios:register' %}">
+            {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            
+            <div class="form-group">
+                <label for="username">Nombre de usuario <span style="color:red">*</span></label>
+                <input type="text" id="username" name="username" placeholder="Username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Correo electrónico <span style="color:red">*</span></label>
+                <input type="email" id="email" name="email" placeholder="usuario@email.com" required>
+            </div>
+
+            <!-- CAMPO DE TELÉFONO INTELIGENTE -->
+            <div class="form-group">
+                <label for="telefono">Teléfono <span style="color:red">*</span></label>
+                <input 
+                    type="tel" 
+                    id="telefono" 
+                    name="telefono" 
+                    placeholder="XXXX-XXXX" 
+                    maxlength="9"
+                     pattern="\d{4}-\d{4}"
+                    title="8 dígitos, ej: 0991-2345"
+                    required
+                    oninput="formatPhone(this)"
+                    onpaste="setTimeout(()=>formatPhone(this),0)"
+                    onblur="formatPhone(this)"
+                >
+                <small style="color:#64748b; font-size:12px; margin-top:4px; display:block;"></small>
+            </div>
+
+            <!-- SELECTOR DE ROLES PÚBLICOS -->
+            <div class="form-group">
+                <label for="rol">¿Qué tipo de usuario eres? <span style="color:red">*</span></label>
+                <select id="rol" name="rol" required>
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="inquilino">Inquilino</option>
+                    <option value="propietario">Propietario</option>
+                </select>
+                <small style="color:#64748b; font-size:12px; margin-top:6px; display:block;">
+                    Si solo querés ver viviendas y coordinar visitas, elegí <strong>Visitante</strong>.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña <span style="color:red">*</span></label>
+                <input type="password" id="password" name="password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+            </div>
+
+            <button type="submit" class="btn-register">Registrarme</button>
+        </form>
+
+        <div class="login-link">
+            ¿Ya tenés cuenta?
+            <a href="{% url 'usuarios:custom-login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Iniciá sesión aquí</a>
+        </div>
+        <div class="login-link" style="margin-top:12px;">
+            <a href="{% url 'usuarios:catalogo' %}">
+                <i class="fa-solid fa-house-magnifying-glass"></i> Ver viviendas disponibles
+            </a>
+        </div>
+    </div>
+
+    <!-- Script para formatear teléfono automáticamente -->
+    <script>
+        function formatPhone(input) {
+            // Eliminar todo lo que no sea número
+            let value = input.value.replace(/\D/g, '');
+            
+            // Si tiene más de 4 dígitos, insertar guion después del cuarto
+            if (value.length > 4) {
+                value = value.substring(0, 4) + '-' + value.substring(4, 8);
+            }
+            
+            // Actualizar el valor del input
+            input.value = value;
+        }
+    </script>
+
+</body>
+</html>
